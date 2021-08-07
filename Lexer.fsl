@@ -1,0 +1,19 @@
+{
+open Parser
+let lexeme = FSharp.Text.Lexing.LexBuffer<_>.LexemeString
+}
+rule token = parse
+    [' ' '\t' '\n'] {token lexbuf}
+    | ";;" {EOT}
+    | "true" {TRUE}
+    | "false" {FALSE}
+    | "if" {IF}
+    | "then" {THEN}
+    | "else" {ELSE}
+    | "fun" {FUN}
+    | ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
+        {VAR (lexeme lexbuf)}
+    | "->" {RARROW}
+    | '(' {LPAREN}
+    | ')' {RPAREN}
+    | eof {EOT}
