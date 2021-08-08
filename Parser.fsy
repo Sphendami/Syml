@@ -19,7 +19,7 @@ non_applist_term:
         let arg =
             match $2 with
             | Language.Var s -> s
-            | _ -> failwith "bad arg"
+            | _ -> failwith "parse error"
         Language.Abs (arg, $4)
     }
     | IF term THEN term ELSE term {

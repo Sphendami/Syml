@@ -36,6 +36,9 @@ let openClosure value =
     | Clos (term, _) -> term
     | Prim term -> term
 
+exception EvaluationException of string
+let evaluationException msg = raise (EvaluationException msg)
+
 
 [<StructuredFormatDisplay("{Disp}")>]
 type Type =
@@ -62,13 +65,16 @@ type Constr = Eq of Type * Type
 
 type Subst = MapsTo of string * Type
 
+exception TypingException of string
+let typingException msg = raise (TypingException msg)
+
 
 let rec evalR (env: Env) term =
     match term with
     | Var s ->
         match Map.tryFind s env with
         | Some value -> value
-        | None -> failwith "unbound variable"
+        | None -> evaluationException "internal error: unbound variable"
     | Abs _ as t -> Clos (t, env)
     | App (t1, t2) ->
         let v1' = evalR env t1
@@ -76,7 +82,7 @@ let rec evalR (env: Env) term =
         | Clos (Abs (x, t1'Body), env') ->
             let v2' = evalR env t2
             evalR (env'.Add(x, v2')) t1'Body
-        | _ -> failwith "function is not function"
+        | _ -> evaluationException "internal error: cannot apply"
     | True | False as t -> Prim t
     | If (c, t, e) ->
         let vc = evalR env c
@@ -85,7 +91,7 @@ let rec evalR (env: Env) term =
             evalR env t
         | Prim False ->
             evalR env e
-        | _ -> failwith "condition must be true or false"
+        | _ -> evaluationException "internal error: non-Boolean condition"
 
 let eval = evalR Map.empty
 
@@ -101,7 +107,7 @@ let rec collectConstr (cxt: Context) term =
     | Var s ->
         match Map.tryFind s cxt with
         | Some ty -> ty, []
-        | None -> failwith "unbound variable"
+        | None -> typingException "unbound variable"
     | Abs (x, body) ->
         let xType = genFreshTyVar()
         let bodyType, constr = collectConstr (cxt.Add(x, xType)) body
@@ -146,7 +152,7 @@ let rec unify constraints =
         | (Fun (ty11, ty12), Fun (ty21, ty22)) ->
             let constrs' = Eq (ty11, ty21) :: Eq (ty12, ty22) :: constrs
             unify constrs'
-        | _ -> failwith "invalid constraint"
+        | _ -> typingException "type mismatch"
 
 let typeof term =
     let baseType, constraints = collectConstr Map.empty term
