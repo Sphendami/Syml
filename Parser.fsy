@@ -1,7 +1,3 @@
-%{
-exception ParserException of string
-let parserException msg = raise (ParserException msg)
-%}
 %token <string> VAR
 %token FUN RARROW
 %token LPAREN RPAREN
@@ -23,7 +19,7 @@ non_applist_term:
         let arg =
             match $2 with
             | Language.Var s -> s
-            | _ -> parserException "bad arg"
+            | _ -> failwith "parse error"
         Language.Abs (arg, $4)
     }
     | IF term THEN term ELSE term {
