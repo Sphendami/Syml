@@ -8,6 +8,7 @@ type Term =
     | App of Term * Term
     | True
     | False
+    | Integer of int
     | If of cond:Term * thenClause:Term * elseClause:Term
     with
         override this.ToString() =
@@ -17,6 +18,7 @@ type Term =
             | App (t1, t2) -> $"(%A{t1}) (%A{t2})"
             | True -> "true"
             | False -> "false"
+            | Integer i -> $"{i}"
             | If (c, t, e) -> $"if %A{c} then %A{t} else %A{e}"
         member this.Disp = this.ToString()
 
@@ -45,19 +47,21 @@ type Type =
     | TyVar of string
     | Fun of Type * Type
     | Bool
+    | Int
     with
         override this.ToString() =
             match this with
             | TyVar s -> s
             | Fun (t1, t2) -> $"(%A{t1})->%A{t2}"
             | Bool -> "Bool"
+            | Int -> "Int"
         member this.Disp = this.ToString()
 
         member this.HasTyVar name =
             match this with
             | TyVar s -> s = name
             | Fun (t1, t2) -> t1.HasTyVar name || t2.HasTyVar name
-            | Bool -> false
+            | Bool | Int -> false
 
 type Context = Map<string, Type>
 
@@ -83,7 +87,7 @@ let rec evalR (env: Env) term =
             let v2' = evalR env t2
             evalR (env'.Add(x, v2')) t1'Body
         | _ -> evaluationException "internal error: cannot apply"
-    | True | False as t -> Prim t
+    | True | False | Integer _ as t -> Prim t
     | If (c, t, e) ->
         let vc = evalR env c
         match vc with
@@ -118,6 +122,7 @@ let rec collectConstr (cxt: Context) term =
         let wholeType = genFreshTyVar()
         wholeType, Eq (t1Type, Fun (t2Type, wholeType)) :: t1Constr @ t2Constr
     | True | False -> Bool, []
+    | Integer _ -> Int, []
     | If (c, t, e) ->
         let cType, cConstr = collectConstr cxt c
         let tType, tConstr = collectConstr cxt t
@@ -131,7 +136,7 @@ let rec substType (MapsTo (replacedTyVarName, insertedType) as substitution) tar
         let ty1' = substType substitution ty1
         let ty2' = substType substitution ty2
         Fun (ty1', ty2')
-    | Bool as ty -> ty
+    | Bool | Int as ty -> ty
 
 let substConstr substitution constr =
     let subst = substType substitution

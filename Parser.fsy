@@ -3,6 +3,7 @@
 %token LPAREN RPAREN
 %token TRUE FALSE
 %token IF THEN ELSE
+%token <int> INTEGER
 %token EOT
 %start main
 %type <Language.Term> main
@@ -13,6 +14,7 @@ main:
 non_applist_term:
     | TRUE {Language.True}
     | FALSE {Language.False}
+    | INTEGER {Language.Integer $1}
     | LPAREN term RPAREN {$2}
     | VAR {Language.Var $1}
     | FUN term RARROW term {
