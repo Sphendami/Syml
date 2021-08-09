@@ -1,6 +1,8 @@
 module Language
 
 
+type BinOp = | Add | Sub | Mul | Div
+
 [<StructuredFormatDisplay("{Disp}")>]
 type Term =
     | Var of string
@@ -10,10 +12,7 @@ type Term =
     | False
     | Integer of int
     | If of cond:Term * thenClause:Term * elseClause:Term
-    | Add of Term * Term
-    | Sub of Term * Term
-    | Mul of Term * Term
-    | Div of Term * Term
+    | BinaryOp of BinOp * Term * Term
     with
         override this.ToString() =
             match this with
@@ -24,10 +23,14 @@ type Term =
             | False -> "false"
             | Integer i -> $"{i}"
             | If (c, t, e) -> $"if %A{c} then %A{t} else %A{e}"
-            | Add (t1, t2) -> $"(%A{t1}) + (%A{t2})"
-            | Sub (t1, t2) -> $"(%A{t1}) - (%A{t2})"
-            | Mul (t1, t2) -> $"(%A{t1}) * (%A{t2})"
-            | Div (t1, t2) -> $"(%A{t1}) / (%A{t2})"
+            | BinaryOp (op, t1, t2) ->
+                let opSymb =
+                    match op with
+                    | Add -> "+"
+                    | Sub -> "-"
+                    | Mul -> "*"
+                    | Div -> "/"
+                $"(%A{t1}) {opSymb} (%A{t2})"
         member this.Disp = this.ToString()
 
 type Env = Map<string, Value>
@@ -104,29 +107,18 @@ let rec evalR (env: Env) term =
         | Prim False ->
             evalR env e
         | _ -> evaluationException "internal error: non-Boolean condition"
-    | Add (t1, t2) ->
+    | BinaryOp (op, t1, t2) ->
         let t1' = evalR env t1
         let t2' = evalR env t2
         match t1', t2' with
-        | Prim (Integer i1), Prim (Integer i2) -> Prim (Integer (i1 + i2))
-        | _ -> evaluationException "internal error: non-Integer operand"
-    | Sub (t1, t2) ->
-        let t1' = evalR env t1
-        let t2' = evalR env t2
-        match t1', t2' with
-        | Prim (Integer i1), Prim (Integer i2) -> Prim (Integer (i1 - i2))
-        | _ -> evaluationException "internal error: non-Integer operand"
-    | Mul (t1, t2) ->
-        let t1' = evalR env t1
-        let t2' = evalR env t2
-        match t1', t2' with
-        | Prim (Integer i1), Prim (Integer i2) -> Prim (Integer (i1 * i2))
-        | _ -> evaluationException "internal error: non-Integer operand"
-    | Div (t1, t2) ->
-        let t1' = evalR env t1
-        let t2' = evalR env t2
-        match t1', t2' with
-        | Prim (Integer i1), Prim (Integer i2) -> Prim (Integer (i1 / i2))
+        | Prim (Integer i1), Prim (Integer i2) ->
+            let termConstructor, operation =
+                match op with
+                | Add -> Integer, ( + )
+                | Sub -> Integer, ( - )
+                | Mul -> Integer, ( * )
+                | Div -> Integer, ( / )
+            Prim (termConstructor (operation i1 i2))
         | _ -> evaluationException "internal error: non-Integer operand"
 let eval = evalR Map.empty
 
@@ -159,22 +151,12 @@ let rec collectConstr (cxt: Context) term =
         let tType, tConstr = collectConstr cxt t
         let eType, eConstr = collectConstr cxt e
         tType, Eq (cType, Bool) :: Eq (tType, eType) :: cConstr @ tConstr @ eConstr
-    | Add (t1, t2) ->
+    | BinaryOp (op, t1, t2) ->
         let t1Type, t1Constr = collectConstr cxt t1
         let t2Type, t2Constr = collectConstr cxt t2
-        Int, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
-    | Sub (t1, t2) ->
-        let t1Type, t1Constr = collectConstr cxt t1
-        let t2Type, t2Constr = collectConstr cxt t2
-        Int, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
-    | Mul (t1, t2) ->
-        let t1Type, t1Constr = collectConstr cxt t1
-        let t2Type, t2Constr = collectConstr cxt t2
-        Int, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
-    | Div (t1, t2) ->
-        let t1Type, t1Constr = collectConstr cxt t1
-        let t2Type, t2Constr = collectConstr cxt t2
-        Int, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
+        match op with
+        | Add | Sub | Mul | Div ->
+            Int, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
 
 let rec substType (MapsTo (replacedTyVarName, insertedType) as substitution) targetType =
     match targetType with

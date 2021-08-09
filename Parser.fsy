@@ -30,10 +30,10 @@ non_applist_term:
     | IF term THEN term ELSE term {
         Language.If ($2, $4, $6)
     }
-    | term PLUS term {Language.Add ($1, $3)}
-    | term MINUS term {Language.Sub ($1, $3)}
-    | term STAR term {Language.Mul ($1, $3)}
-    | term SLASH term {Language.Div ($1, $3)}
+    | term PLUS term {Language.BinaryOp (Language.Add, $1, $3)}
+    | term MINUS term {Language.BinaryOp (Language.Sub, $1, $3)}
+    | term STAR term {Language.BinaryOp (Language.Mul, $1, $3)}
+    | term SLASH term {Language.BinaryOp (Language.Div, $1, $3)}
 ;
 applist:
     | non_applist_term non_applist_term {Language.App ($1, $2)}
