@@ -14,6 +14,10 @@ rule token = parse
     | ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
         {VAR (lexeme lexbuf)}
     | ['+' '-']? ['0'-'9']+ {INTEGER (lexeme lexbuf |> int)}
+    | '+' {PLUS}
+    | '-' {MINUS}
+    | '*' {STAR}
+    | '/' {SLASH}
     | "->" {RARROW}
     | '(' {LPAREN}
     | ')' {RPAREN}
