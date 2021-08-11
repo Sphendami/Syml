@@ -11,15 +11,26 @@
 %start main
 %type <Language.Term> main
 %%
-main:
-    term EOT {$1}
-;
-non_applist_term:
+atom:
     | TRUE {Language.True}
     | FALSE {Language.False}
     | INTEGER {Language.Integer $1}
     | LPAREN term RPAREN {$2}
     | VAR {Language.Var $1}
+;
+applist:
+    | atom {$1}
+    | applist atom {Language.App ($1, $2)}
+;
+expr:
+    | applist {$1}
+    | expr PLUS expr {Language.BinaryOp (Language.Add, $1, $3)}
+    | expr MINUS expr {Language.BinaryOp (Language.Sub, $1, $3)}
+    | expr STAR expr {Language.BinaryOp (Language.Mul, $1, $3)}
+    | expr SLASH expr {Language.BinaryOp (Language.Div, $1, $3)}
+;
+term:
+    | expr {$1}
     | FUN term RARROW term {
         let arg =
             match $2 with
@@ -30,16 +41,7 @@ non_applist_term:
     | IF term THEN term ELSE term {
         Language.If ($2, $4, $6)
     }
-    | term PLUS term {Language.BinaryOp (Language.Add, $1, $3)}
-    | term MINUS term {Language.BinaryOp (Language.Sub, $1, $3)}
-    | term STAR term {Language.BinaryOp (Language.Mul, $1, $3)}
-    | term SLASH term {Language.BinaryOp (Language.Div, $1, $3)}
 ;
-applist:
-    | non_applist_term non_applist_term {Language.App ($1, $2)}
-    | applist non_applist_term {Language.App ($1, $2)}
-;
-term:
-    | non_applist_term {$1}
-    | applist {$1}
+main:
+    term EOT {$1}
 ;
