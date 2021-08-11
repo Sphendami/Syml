@@ -1,6 +1,8 @@
 module Language
 
 
+type BinOp = | Add | Sub | Mul | Div
+
 [<StructuredFormatDisplay("{Disp}")>]
 type Term =
     | Var of string
@@ -8,7 +10,9 @@ type Term =
     | App of Term * Term
     | True
     | False
+    | Integer of int
     | If of cond:Term * thenClause:Term * elseClause:Term
+    | BinaryOp of BinOp * Term * Term
     with
         override this.ToString() =
             match this with
@@ -17,7 +21,16 @@ type Term =
             | App (t1, t2) -> $"(%A{t1}) (%A{t2})"
             | True -> "true"
             | False -> "false"
+            | Integer i -> $"{i}"
             | If (c, t, e) -> $"if %A{c} then %A{t} else %A{e}"
+            | BinaryOp (op, t1, t2) ->
+                let opSymb =
+                    match op with
+                    | Add -> "+"
+                    | Sub -> "-"
+                    | Mul -> "*"
+                    | Div -> "/"
+                $"(%A{t1}) {opSymb} (%A{t2})"
         member this.Disp = this.ToString()
 
 type Env = Map<string, Value>
@@ -45,19 +58,21 @@ type Type =
     | TyVar of string
     | Fun of Type * Type
     | Bool
+    | Int
     with
         override this.ToString() =
             match this with
             | TyVar s -> s
             | Fun (t1, t2) -> $"(%A{t1})->%A{t2}"
             | Bool -> "Bool"
+            | Int -> "Int"
         member this.Disp = this.ToString()
 
         member this.HasTyVar name =
             match this with
             | TyVar s -> s = name
             | Fun (t1, t2) -> t1.HasTyVar name || t2.HasTyVar name
-            | Bool -> false
+            | Bool | Int -> false
 
 type Context = Map<string, Type>
 
@@ -83,7 +98,7 @@ let rec evalR (env: Env) term =
             let v2' = evalR env t2
             evalR (env'.Add(x, v2')) t1'Body
         | _ -> evaluationException "internal error: cannot apply"
-    | True | False as t -> Prim t
+    | True | False | Integer _ as t -> Prim t
     | If (c, t, e) ->
         let vc = evalR env c
         match vc with
@@ -92,7 +107,19 @@ let rec evalR (env: Env) term =
         | Prim False ->
             evalR env e
         | _ -> evaluationException "internal error: non-Boolean condition"
-
+    | BinaryOp (op, t1, t2) ->
+        let t1' = evalR env t1
+        let t2' = evalR env t2
+        match t1', t2' with
+        | Prim (Integer i1), Prim (Integer i2) ->
+            let termConstructor, operation =
+                match op with
+                | Add -> Integer, ( + )
+                | Sub -> Integer, ( - )
+                | Mul -> Integer, ( * )
+                | Div -> Integer, ( / )
+            Prim (termConstructor (operation i1 i2))
+        | _ -> evaluationException "internal error: non-Integer operand"
 let eval = evalR Map.empty
 
 
@@ -118,11 +145,18 @@ let rec collectConstr (cxt: Context) term =
         let wholeType = genFreshTyVar()
         wholeType, Eq (t1Type, Fun (t2Type, wholeType)) :: t1Constr @ t2Constr
     | True | False -> Bool, []
+    | Integer _ -> Int, []
     | If (c, t, e) ->
         let cType, cConstr = collectConstr cxt c
         let tType, tConstr = collectConstr cxt t
         let eType, eConstr = collectConstr cxt e
         tType, Eq (cType, Bool) :: Eq (tType, eType) :: cConstr @ tConstr @ eConstr
+    | BinaryOp (op, t1, t2) ->
+        let t1Type, t1Constr = collectConstr cxt t1
+        let t2Type, t2Constr = collectConstr cxt t2
+        match op with
+        | Add | Sub | Mul | Div ->
+            Int, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
 
 let rec substType (MapsTo (replacedTyVarName, insertedType) as substitution) targetType =
     match targetType with
@@ -131,7 +165,7 @@ let rec substType (MapsTo (replacedTyVarName, insertedType) as substitution) tar
         let ty1' = substType substitution ty1
         let ty2' = substType substitution ty2
         Fun (ty1', ty2')
-    | Bool as ty -> ty
+    | Bool | Int as ty -> ty
 
 let substConstr substitution constr =
     let subst = substType substitution
