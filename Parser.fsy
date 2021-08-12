@@ -1,3 +1,6 @@
+%{
+open Language
+%}
 %token <string> VAR
 %token FUN RARROW
 %token LPAREN RPAREN
@@ -12,35 +15,33 @@
 %type <Language.Term> main
 %%
 atom:
-    | TRUE {Language.True}
-    | FALSE {Language.False}
-    | INTEGER {Language.Integer $1}
+    | TRUE {True}
+    | FALSE {False}
+    | INTEGER {Integer $1}
     | LPAREN term RPAREN {$2}
-    | VAR {Language.Var $1}
+    | VAR {Var $1}
 ;
 applist:
     | atom {$1}
-    | applist atom {Language.App ($1, $2)}
+    | applist atom {App ($1, $2)}
 ;
 expr:
     | applist {$1}
-    | expr PLUS expr {Language.BinaryOp (Language.Add, $1, $3)}
-    | expr MINUS expr {Language.BinaryOp (Language.Sub, $1, $3)}
-    | expr STAR expr {Language.BinaryOp (Language.Mul, $1, $3)}
-    | expr SLASH expr {Language.BinaryOp (Language.Div, $1, $3)}
+    | expr PLUS expr {BinaryOp (Add, $1, $3)}
+    | expr MINUS expr {BinaryOp (Sub, $1, $3)}
+    | expr STAR expr {BinaryOp (Mul, $1, $3)}
+    | expr SLASH expr {BinaryOp (Div, $1, $3)}
 ;
 term:
     | expr {$1}
     | FUN term RARROW term {
         let arg =
             match $2 with
-            | Language.Var s -> s
+            | Var s -> s
             | _ -> failwith "parse error"
-        Language.Abs (arg, $4)
+        Abs (arg, $4)
     }
-    | IF term THEN term ELSE term {
-        Language.If ($2, $4, $6)
-    }
+    | IF term THEN term ELSE term {If ($2, $4, $6)}
 ;
 main:
     term EOT {$1}
