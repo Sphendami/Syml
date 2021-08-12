@@ -46,8 +46,8 @@ and [<StructuredFormatDisplay("{Disp}")>] Value =
 
 let openClosure value =
     match value with
-    | Clos (term, _) -> term
-    | Prim term -> term
+    | Clos (term, env) -> term, env
+    | Prim term -> term, Map.empty
 
 exception EvaluationException of string
 let evaluationException msg = raise (EvaluationException msg)

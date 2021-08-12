@@ -39,7 +39,7 @@ let rec repl () =
         repl ()
     
     try
-        eval term |> openClosure |> printfn "eval: %A"
+        eval term |> openClosure ||> printfn "eval: %A (with %A)"
     with
     | EvaluationException msg ->
         eprintfn $"runtime error: {msg}"
