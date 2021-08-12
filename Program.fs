@@ -2,7 +2,7 @@ open Language
 
 [<EntryPoint>]
 let main argv =
-    while true do
+    let rec repl () =
         printf ":> "
         let lexbuf = FSharp.Text.Lexing.LexBuffer<_>.FromTextReader stdin
         let term = 
@@ -25,30 +25,34 @@ let main argv =
                     eprintfn "unexpected error:"
                     eprintfn $"{msg}"
                     eprintfn $"{e.StackTrace}"
-                exit 1
+                repl ()
+                exit 0
         
         try
             typeof term |> printfn "type: %A"
         with
         | TypingException msg ->
             eprintfn $"typing error: {msg}"
-            exit 1
+            repl ()
         | e ->
             eprintfn "unexpected error:"
             eprintfn $"{e.Message}"
             eprintfn $"{e.StackTrace}"
-            exit 1
+            repl ()
         
         try
             eval term |> openClosure |> printfn "eval: %A"
         with
         | EvaluationException msg ->
             eprintfn $"runtime error: {msg}"
-            exit 1
+            repl ()
         | e ->
             eprintfn "unexpected error:"
             eprintfn $"{e.Message}"
             eprintfn $"{e.StackTrace}"
-            exit 1
+            repl ()
+
+        repl ()
     
+    repl ()
     0
