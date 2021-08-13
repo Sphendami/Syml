@@ -139,9 +139,9 @@ let rec evalR (env: Env) term =
                 match op with
                 | And -> ( && ) ||>> Boolean
                 | Or -> ( || ) ||>> Boolean
-                | _ -> evaluationException "internal error: non-Integer operator"
+                | _ -> evaluationException "internal error: non-Boolean operator"
             Prim (termBuilder b1 b2)
-        | _ -> evaluationException "internal error: non-Integer operand"
+        | _ -> evaluationException "internal error: unexpected operands"
 let eval = evalR Map.empty
 
 
