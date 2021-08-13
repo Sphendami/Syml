@@ -18,6 +18,8 @@ rule token = parse
     | '-' {MINUS}
     | '*' {STAR}
     | '/' {SLASH}
+    | "&&" {ANDAND}
+    | "||" {PIPEPIPE}
     | "->" {RARROW}
     | '(' {LPAREN}
     | ')' {RPAREN}

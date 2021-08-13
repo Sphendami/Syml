@@ -8,6 +8,7 @@ open Language
 %token IF THEN ELSE
 %token <int> INTEGER
 %token PLUS MINUS STAR SLASH
+%token ANDAND PIPEPIPE
 %token EOT
 %nonassoc PLUS MINUS
 %nonassoc STAR SLASH
@@ -31,6 +32,8 @@ expr:
     | expr MINUS expr {BinaryOp (Sub, $1, $3)}
     | expr STAR expr {BinaryOp (Mul, $1, $3)}
     | expr SLASH expr {BinaryOp (Div, $1, $3)}
+    | expr ANDAND expr {BinaryOp (And, $1, $3)}
+    | expr PIPEPIPE expr {BinaryOp (Or, $1, $3)}
 ;
 term:
     | expr {$1}
