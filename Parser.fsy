@@ -15,8 +15,8 @@ open Language
 %type <Language.Term> main
 %%
 atom:
-    | TRUE {True}
-    | FALSE {False}
+    | TRUE {Boolean true}
+    | FALSE {Boolean false}
     | INTEGER {Integer $1}
     | LPAREN term RPAREN {$2}
     | VAR {Var $1}

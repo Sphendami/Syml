@@ -8,8 +8,7 @@ type Term =
     | Var of string
     | Abs of string * Term
     | App of Term * Term
-    | True
-    | False
+    | Boolean of bool
     | Integer of int
     | If of cond:Term * thenClause:Term * elseClause:Term
     | BinaryOp of BinOp * Term * Term
@@ -19,8 +18,7 @@ type Term =
             | Var s -> s
             | Abs (x, body) -> $"fun %s{x} -> %A{body}"
             | App (t1, t2) -> $"(%A{t1}) (%A{t2})"
-            | True -> "true"
-            | False -> "false"
+            | Boolean b -> $"{b}".ToLower()
             | Integer i -> $"{i}"
             | If (c, t, e) -> $"if %A{c} then %A{t} else %A{e}"
             | BinaryOp (op, t1, t2) ->
@@ -98,13 +96,13 @@ let rec evalR (env: Env) term =
             let v2' = evalR env t2
             evalR (env'.Add(x, v2')) t1'Body
         | _ -> evaluationException "internal error: cannot apply"
-    | True | False | Integer _ as t -> Prim t
+    | Boolean _ | Integer _ as t -> Prim t
     | If (c, t, e) ->
         let vc = evalR env c
         match vc with
-        | Prim True ->
+        | Prim (Boolean true) ->
             evalR env t
-        | Prim False ->
+        | Prim (Boolean false) ->
             evalR env e
         | _ -> evaluationException "internal error: non-Boolean condition"
     | BinaryOp (op, t1, t2) ->
@@ -144,7 +142,7 @@ let rec collectConstr (cxt: Context) term =
         let t2Type, t2Constr = collectConstr cxt t2
         let wholeType = genFreshTyVar()
         wholeType, Eq (t1Type, Fun (t2Type, wholeType)) :: t1Constr @ t2Constr
-    | True | False -> Bool, []
+    | Boolean _ -> Bool, []
     | Integer _ -> Int, []
     | If (c, t, e) ->
         let cType, cConstr = collectConstr cxt c
