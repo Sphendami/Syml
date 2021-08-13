@@ -20,6 +20,11 @@ rule token = parse
     | '/' {SLASH}
     | "&&" {ANDAND}
     | "||" {PIPEPIPE}
+    | '=' {EQUAL}
+    | '<' {LESSTHAN}
+    | '>' {GREATERTHAN}
+    | "<=" {LESSTHANEQ}
+    | ">=" {GREATERTHANEQ}
     | "->" {RARROW}
     | '(' {LPAREN}
     | ')' {RPAREN}

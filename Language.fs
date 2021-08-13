@@ -5,6 +5,7 @@ let ( ||>> ) = fun f g -> fun a1 a2 -> (a1, a2) ||> f |> g
 type BinOp =
     | Add | Sub | Mul | Div
     | And | Or
+    | Equal | Lt | Gt | Lte | Gte
 
 [<StructuredFormatDisplay("{Disp}")>]
 type Term =
@@ -33,6 +34,11 @@ type Term =
                     | Div -> "/"
                     | And -> "&&"
                     | Or -> "||"
+                    | Equal -> "="
+                    | Lt -> "<"
+                    | Gt -> ">"
+                    | Lte -> "<="
+                    | Gte -> ">="
                 $"(%A{t1}) {opSymb} (%A{t2})"
         member this.Disp = this.ToString()
 
@@ -121,6 +127,11 @@ let rec evalR (env: Env) term =
                 | Sub -> ( - ) ||>> Integer
                 | Mul -> ( * ) ||>> Integer
                 | Div -> ( / ) ||>> Integer
+                | Equal -> ( = ) ||>> Boolean
+                | Lt -> ( < ) ||>> Boolean
+                | Gt -> ( > ) ||>> Boolean
+                | Lte -> ( <= ) ||>> Boolean
+                | Gte -> ( >= ) ||>> Boolean
                 | _ -> evaluationException "internal error: non-Integer operator"
             Prim (termBuilder i1 i2)
         | Prim (Boolean b1), Prim (Boolean b2) ->
@@ -170,6 +181,8 @@ let rec collectConstr (cxt: Context) term =
             Int, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
         | And | Or ->
             Bool, Eq (t1Type, Bool) :: Eq (t2Type, Bool) :: t1Constr @ t2Constr
+        | Equal | Lt | Gt | Lte | Gte ->
+            Bool, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
 
 let rec substType (MapsTo (replacedTyVarName, insertedType) as substitution) targetType =
     match targetType with
