@@ -1,5 +1,6 @@
 module Language
 
+let ( ||>> ) = fun f g -> fun a1 a2 -> (a1, a2) ||> f |> g
 
 type BinOp =
     | Add | Sub | Mul | Div
@@ -114,21 +115,21 @@ let rec evalR (env: Env) term =
         let t2' = evalR env t2
         match t1', t2' with
         | Prim (Integer i1), Prim (Integer i2) ->
-            let termConstructor, operation =
+            let termBuilder =
                 match op with
-                | Add -> Integer, ( + )
-                | Sub -> Integer, ( - )
-                | Mul -> Integer, ( * )
-                | Div -> Integer, ( / )
+                | Add -> ( + ) ||>> Integer
+                | Sub -> ( - ) ||>> Integer
+                | Mul -> ( * ) ||>> Integer
+                | Div -> ( / ) ||>> Integer
                 | _ -> evaluationException "internal error: non-Integer operator"
-            Prim (termConstructor (operation i1 i2))
+            Prim (termBuilder i1 i2)
         | Prim (Boolean b1), Prim (Boolean b2) ->
-            let termConstructor, operation =
+            let termBuilder =
                 match op with
-                | And -> Boolean, ( && )
-                | Or -> Boolean, ( || )
+                | And -> ( && ) ||>> Boolean
+                | Or -> ( || ) ||>> Boolean
                 | _ -> evaluationException "internal error: non-Integer operator"
-            Prim (termConstructor (operation b1 b2))
+            Prim (termBuilder b1 b2)
         | _ -> evaluationException "internal error: non-Integer operand"
 let eval = evalR Map.empty
 
