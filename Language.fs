@@ -1,15 +1,18 @@
 module Language
 
+let ( ||>> ) = fun f g -> fun a1 a2 -> (a1, a2) ||> f |> g
 
-type BinOp = | Add | Sub | Mul | Div
+type BinOp =
+    | Add | Sub | Mul | Div
+    | And | Or
+    | Equal | Lt | Gt | Lte | Gte
 
 [<StructuredFormatDisplay("{Disp}")>]
 type Term =
     | Var of string
     | Abs of string * Term
     | App of Term * Term
-    | True
-    | False
+    | Boolean of bool
     | Integer of int
     | If of cond:Term * thenClause:Term * elseClause:Term
     | BinaryOp of BinOp * Term * Term
@@ -19,8 +22,7 @@ type Term =
             | Var s -> s
             | Abs (x, body) -> $"fun %s{x} -> %A{body}"
             | App (t1, t2) -> $"(%A{t1}) (%A{t2})"
-            | True -> "true"
-            | False -> "false"
+            | Boolean b -> $"{b}".ToLower()
             | Integer i -> $"{i}"
             | If (c, t, e) -> $"if %A{c} then %A{t} else %A{e}"
             | BinaryOp (op, t1, t2) ->
@@ -30,6 +32,13 @@ type Term =
                     | Sub -> "-"
                     | Mul -> "*"
                     | Div -> "/"
+                    | And -> "&&"
+                    | Or -> "||"
+                    | Equal -> "="
+                    | Lt -> "<"
+                    | Gt -> ">"
+                    | Lte -> "<="
+                    | Gte -> ">="
                 $"(%A{t1}) {opSymb} (%A{t2})"
         member this.Disp = this.ToString()
 
@@ -98,13 +107,13 @@ let rec evalR (env: Env) term =
             let v2' = evalR env t2
             evalR (env'.Add(x, v2')) t1'Body
         | _ -> evaluationException "internal error: cannot apply"
-    | True | False | Integer _ as t -> Prim t
+    | Boolean _ | Integer _ as t -> Prim t
     | If (c, t, e) ->
         let vc = evalR env c
         match vc with
-        | Prim True ->
+        | Prim (Boolean true) ->
             evalR env t
-        | Prim False ->
+        | Prim (Boolean false) ->
             evalR env e
         | _ -> evaluationException "internal error: non-Boolean condition"
     | BinaryOp (op, t1, t2) ->
@@ -112,14 +121,27 @@ let rec evalR (env: Env) term =
         let t2' = evalR env t2
         match t1', t2' with
         | Prim (Integer i1), Prim (Integer i2) ->
-            let termConstructor, operation =
+            let termBuilder =
                 match op with
-                | Add -> Integer, ( + )
-                | Sub -> Integer, ( - )
-                | Mul -> Integer, ( * )
-                | Div -> Integer, ( / )
-            Prim (termConstructor (operation i1 i2))
-        | _ -> evaluationException "internal error: non-Integer operand"
+                | Add -> ( + ) ||>> Integer
+                | Sub -> ( - ) ||>> Integer
+                | Mul -> ( * ) ||>> Integer
+                | Div -> ( / ) ||>> Integer
+                | Equal -> ( = ) ||>> Boolean
+                | Lt -> ( < ) ||>> Boolean
+                | Gt -> ( > ) ||>> Boolean
+                | Lte -> ( <= ) ||>> Boolean
+                | Gte -> ( >= ) ||>> Boolean
+                | _ -> evaluationException "internal error: non-Integer operator"
+            Prim (termBuilder i1 i2)
+        | Prim (Boolean b1), Prim (Boolean b2) ->
+            let termBuilder =
+                match op with
+                | And -> ( && ) ||>> Boolean
+                | Or -> ( || ) ||>> Boolean
+                | _ -> evaluationException "internal error: non-Boolean operator"
+            Prim (termBuilder b1 b2)
+        | _ -> evaluationException "internal error: unexpected operands"
 let eval = evalR Map.empty
 
 
@@ -144,7 +166,7 @@ let rec collectConstr (cxt: Context) term =
         let t2Type, t2Constr = collectConstr cxt t2
         let wholeType = genFreshTyVar()
         wholeType, Eq (t1Type, Fun (t2Type, wholeType)) :: t1Constr @ t2Constr
-    | True | False -> Bool, []
+    | Boolean _ -> Bool, []
     | Integer _ -> Int, []
     | If (c, t, e) ->
         let cType, cConstr = collectConstr cxt c
@@ -157,6 +179,10 @@ let rec collectConstr (cxt: Context) term =
         match op with
         | Add | Sub | Mul | Div ->
             Int, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
+        | And | Or ->
+            Bool, Eq (t1Type, Bool) :: Eq (t2Type, Bool) :: t1Constr @ t2Constr
+        | Equal | Lt | Gt | Lte | Gte ->
+            Bool, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
 
 let rec substType (MapsTo (replacedTyVarName, insertedType) as substitution) targetType =
     match targetType with

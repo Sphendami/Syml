@@ -8,15 +8,21 @@ open Language
 %token IF THEN ELSE
 %token <int> INTEGER
 %token PLUS MINUS STAR SLASH
+%token ANDAND PIPEPIPE
+%token EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
 %token EOT
-%nonassoc PLUS MINUS
-%nonassoc STAR SLASH
+
+%left ANDAND PIPEPIPE
+%left EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
+%left PLUS MINUS
+%left STAR SLASH
+
 %start main
 %type <Language.Term> main
 %%
 atom:
-    | TRUE {True}
-    | FALSE {False}
+    | TRUE {Boolean true}
+    | FALSE {Boolean false}
     | INTEGER {Integer $1}
     | LPAREN term RPAREN {$2}
     | VAR {Var $1}
@@ -31,6 +37,13 @@ expr:
     | expr MINUS expr {BinaryOp (Sub, $1, $3)}
     | expr STAR expr {BinaryOp (Mul, $1, $3)}
     | expr SLASH expr {BinaryOp (Div, $1, $3)}
+    | expr ANDAND expr {BinaryOp (And, $1, $3)}
+    | expr PIPEPIPE expr {BinaryOp (Or, $1, $3)}
+    | expr EQUAL expr {BinaryOp (Equal, $1, $3)}
+    | expr LESSTHAN expr {BinaryOp (Lt, $1, $3)}
+    | expr GREATERTHAN expr {BinaryOp (Gt, $1, $3)}
+    | expr LESSTHANEQ expr {BinaryOp (Lte, $1, $3)}
+    | expr GREATERTHANEQ expr {BinaryOp (Gte, $1, $3)}
 ;
 term:
     | expr {$1}
