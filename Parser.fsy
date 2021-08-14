@@ -19,7 +19,7 @@ open Language
 %left STAR SLASH
 
 %start main
-%type <Language.Term> main
+%type <Language.Toplevel> main
 %%
 atom:
     | TRUE {Boolean true}
@@ -64,6 +64,16 @@ term:
         Let (var, $4, $6)
     }
 ;
+toplevellet:
+    | LET atom EQUAL term {
+        let var =
+            match $2 with
+            | Var s -> s
+            | _ -> failwith "parse error"
+        var, $4
+    }
+;
 main:
-    term EOT {$1}
+    | term EOT {Term $1}
+    | toplevellet EOT {ToplevelLet $1}
 ;

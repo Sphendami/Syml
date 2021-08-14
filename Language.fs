@@ -223,10 +223,15 @@ let rec unify constraints =
             unify constrs'
         | _ -> typingException "type mismatch"
 
-let typeof term =
-    let baseType, constraints = collectConstr Map.empty term
+let typeof cxt term =
+    let baseType, constraints = collectConstr cxt term
     let substitutions = unify constraints
     List.fold
         (fun targetType substitution -> substType substitution targetType)
         baseType
         substitutions
+
+
+type Toplevel =
+    | Term of Term
+    | ToplevelLet of string * Term
