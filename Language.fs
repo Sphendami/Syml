@@ -16,6 +16,7 @@ type Term =
     | Integer of int
     | If of cond:Term * thenClause:Term * elseClause:Term
     | BinaryOp of BinOp * Term * Term
+    | Let of var:string * bounded:Term * body:Term
     with
         override this.ToString() =
             match this with
@@ -40,6 +41,7 @@ type Term =
                     | Lte -> "<="
                     | Gte -> ">="
                 $"(%A{t1}) {opSymb} (%A{t2})"
+            | Let (x, t1, t2) -> $"let %s{x} = %A{t1} in %A{t2}"
         member this.Disp = this.ToString()
 
 type Env = Map<string, Value>
@@ -142,6 +144,9 @@ let rec evalR (env: Env) term =
                 | _ -> evaluationException "internal error: non-Boolean operator"
             Prim (termBuilder b1 b2)
         | _ -> evaluationException "internal error: unexpected operands"
+    | Let (x, t1, t2) ->
+        let v1 = evalR env t1
+        evalR (env.Add(x, v1)) t2
 let eval = evalR Map.empty
 
 
@@ -183,6 +188,10 @@ let rec collectConstr (cxt: Context) term =
             Bool, Eq (t1Type, Bool) :: Eq (t2Type, Bool) :: t1Constr @ t2Constr
         | Equal | Lt | Gt | Lte | Gte ->
             Bool, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
+    | Let (x, t1, t2) ->
+        let t1Type, t1Constr = collectConstr cxt t1
+        let t2Type, t2Constr = collectConstr (cxt.Add(x, t1Type)) t2
+        t2Type, t1Constr @ t2Constr
 
 let rec substType (MapsTo (replacedTyVarName, insertedType) as substitution) targetType =
     match targetType with

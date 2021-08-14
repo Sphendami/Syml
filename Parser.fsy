@@ -10,6 +10,7 @@ open Language
 %token PLUS MINUS STAR SLASH
 %token ANDAND PIPEPIPE
 %token EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
+%token LET IN
 %token EOT
 
 %left ANDAND PIPEPIPE
@@ -55,6 +56,13 @@ term:
         Abs (arg, $4)
     }
     | IF term THEN term ELSE term {If ($2, $4, $6)}
+    | LET atom EQUAL term IN term {
+        let var =
+            match $2 with
+            | Var s -> s
+            | _ -> failwith "parse error"
+        Let (var, $4, $6)
+    }
 ;
 main:
     term EOT {$1}
