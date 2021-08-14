@@ -1,9 +1,37 @@
 open Language
 
-let rec repl () =
+
+let tryTypeof cxt term =
+    try
+        typeof cxt term |> Some
+    with
+    | TypingException msg ->
+        eprintfn $"typing error: {msg}"
+        None
+    | e ->
+        eprintfn "unexpected error:"
+        eprintfn $"{e.Message}"
+        eprintfn $"{e.StackTrace}"
+        None
+
+let tryEval env term =
+    try
+        evalR env term |> Some
+    with
+    | EvaluationException msg ->
+        eprintfn $"runtime error: {msg}"
+        None
+    | e ->
+        eprintfn "unexpected error:"
+        eprintfn $"{e.Message}"
+        eprintfn $"{e.StackTrace}"
+        None
+
+
+let rec repl cxt env =
     printf ":> "
     let lexbuf = FSharp.Text.Lexing.LexBuffer<_>.FromTextReader stdin
-    let term = 
+    let toplevel = 
         try
             Parser.main Lexer.token lexbuf
         with e ->
@@ -23,36 +51,33 @@ let rec repl () =
                 eprintfn "unexpected error:"
                 eprintfn $"{msg}"
                 eprintfn $"{e.StackTrace}"
-            repl ()
+            repl cxt env
             exit 0
     
-    try
-        typeof term |> printfn "type: %A"
-    with
-    | TypingException msg ->
-        eprintfn $"typing error: {msg}"
-        repl ()
-    | e ->
-        eprintfn "unexpected error:"
-        eprintfn $"{e.Message}"
-        eprintfn $"{e.StackTrace}"
-        repl ()
-    
-    try
-        eval term |> openClosure ||> printfn "eval: %A (with %A)"
-    with
-    | EvaluationException msg ->
-        eprintfn $"runtime error: {msg}"
-        repl ()
-    | e ->
-        eprintfn "unexpected error:"
-        eprintfn $"{e.Message}"
-        eprintfn $"{e.StackTrace}"
-        repl ()
+    match toplevel with
+    | Term term ->
+        match tryTypeof cxt term with
+        | None -> repl cxt env
+        | Some ty ->
+            ty |> printfn "type: %A"
+            match tryEval env term with
+            | None -> repl cxt env
+            | Some value ->
+                value |> openClosure ||> printfn "eval: %A (with %A)"
+                repl cxt env
+    | ToplevelLet (x, term) ->
+        match tryTypeof cxt term with
+        | None -> repl cxt env
+        | Some ty ->
+            ty |> printfn "type: %s : %A" x
+            match tryEval env term with
+            | None -> repl cxt env
+            | Some value ->
+                value |> openClosure ||> printfn "eval: %s = %A (with %A)" x
+                repl (cxt.Add(x, ty)) (env.Add(x, value))
 
-    repl ()
     
 [<EntryPoint>]
 let main argv =
-    repl ()
+    repl Map.empty Map.empty
     0

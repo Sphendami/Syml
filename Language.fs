@@ -16,6 +16,8 @@ type Term =
     | Integer of int
     | If of cond:Term * thenClause:Term * elseClause:Term
     | BinaryOp of BinOp * Term * Term
+    | Let of var:string * bounded:Term * body:Term
+    | LetRec of var:string * bounded:Term * body:Term
     with
         override this.ToString() =
             match this with
@@ -40,23 +42,30 @@ type Term =
                     | Lte -> "<="
                     | Gte -> ">="
                 $"(%A{t1}) {opSymb} (%A{t2})"
+            | Let (x, t1, t2) -> $"let %s{x} = %A{t1} in %A{t2}"
+            | LetRec (x, t1, t2) -> $"let rec %s{x} = %A{t1} in %A{t2}"
         member this.Disp = this.ToString()
 
 type Env = Map<string, Value>
 and [<StructuredFormatDisplay("{Disp}")>] Value =
     | Clos of Term * Env
     | Prim of Term
+    | Rec of Value ref
     with
         override this.ToString() =
             match this with
             | Clos (term, env) -> $"<%A{term} @%A{env}>"
             | Prim term -> $"<%A{term}>"
+            | Rec vref -> (!vref).ToString()
         member this.Disp = this.ToString()
 
-let openClosure value =
+let rec openClosure value =
     match value with
-    | Clos (term, env) -> term, env
-    | Prim term -> term, Map.empty
+    | Clos (term, env) ->
+        let keys = env |> Map.toList |> List.unzip |> fst
+        term, keys
+    | Prim term -> term, []
+    | Rec vref -> openClosure (!vref)
 
 exception EvaluationException of string
 let evaluationException msg = raise (EvaluationException msg)
@@ -106,6 +115,12 @@ let rec evalR (env: Env) term =
         | Clos (Abs (x, t1'Body), env') ->
             let v2' = evalR env t2
             evalR (env'.Add(x, v2')) t1'Body
+        | Rec vref ->
+            match !vref with
+            | Clos (Abs (x, t1'Body), env') ->
+                let v2' = evalR env t2
+                evalR (env'.Add(x, v2')) t1'Body
+            | _ -> evaluationException "internal error: cannot apply"
         | _ -> evaluationException "internal error: cannot apply"
     | Boolean _ | Integer _ as t -> Prim t
     | If (c, t, e) ->
@@ -142,6 +157,15 @@ let rec evalR (env: Env) term =
                 | _ -> evaluationException "internal error: non-Boolean operator"
             Prim (termBuilder b1 b2)
         | _ -> evaluationException "internal error: unexpected operands"
+    | Let (x, t1, t2) ->
+        let v1 = evalR env t1
+        evalR (env.Add(x, v1)) t2
+    | LetRec (x, t1, t2) ->
+        let dummy = Prim (Integer 0)
+        let vref = ref dummy
+        let v1 = evalR (env.Add(x, Rec vref)) t1
+        vref := v1
+        evalR (env.Add(x, v1)) t2
 let eval = evalR Map.empty
 
 
@@ -183,6 +207,15 @@ let rec collectConstr (cxt: Context) term =
             Bool, Eq (t1Type, Bool) :: Eq (t2Type, Bool) :: t1Constr @ t2Constr
         | Equal | Lt | Gt | Lte | Gte ->
             Bool, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
+    | Let (x, t1, t2) ->
+        let t1Type, t1Constr = collectConstr cxt t1
+        let t2Type, t2Constr = collectConstr (cxt.Add(x, t1Type)) t2
+        t2Type, t1Constr @ t2Constr
+    | LetRec (x, t1, t2) ->
+        let xType = genFreshTyVar()
+        let t1Type, t1Constr = collectConstr (cxt.Add(x, xType)) t1
+        let t2Type, t2Constr = collectConstr (cxt.Add(x, xType)) t2
+        t2Type, Eq (xType, t1Type) :: t1Constr @ t2Constr
 
 let rec substType (MapsTo (replacedTyVarName, insertedType) as substitution) targetType =
     match targetType with
@@ -214,10 +247,15 @@ let rec unify constraints =
             unify constrs'
         | _ -> typingException "type mismatch"
 
-let typeof term =
-    let baseType, constraints = collectConstr Map.empty term
+let typeof cxt term =
+    let baseType, constraints = collectConstr cxt term
     let substitutions = unify constraints
     List.fold
         (fun targetType substitution -> substType substitution targetType)
         baseType
         substitutions
+
+
+type Toplevel =
+    | Term of Term
+    | ToplevelLet of string * Term
