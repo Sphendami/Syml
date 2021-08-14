@@ -10,7 +10,7 @@ open Language
 %token PLUS MINUS STAR SLASH
 %token ANDAND PIPEPIPE
 %token EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
-%token LET IN
+%token LET REC IN
 %token EOT
 
 %left ANDAND PIPEPIPE
@@ -62,6 +62,13 @@ term:
             | Var s -> s
             | _ -> failwith "parse error"
         Let (var, $4, $6)
+    }
+    | LET REC atom EQUAL term IN term {
+        let var =
+            match $3 with
+            | Var s -> s
+            | _ -> failwith "parse error"
+        LetRec (var, $5, $7)
     }
 ;
 toplevellet:
