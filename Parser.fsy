@@ -11,6 +11,7 @@ open Language
 %token ANDAND PIPEPIPE
 %token EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
 %token LET REC IN
+%token HASHHELP HASHEXIT
 %token EOT
 
 %left ANDAND PIPEPIPE
@@ -87,7 +88,12 @@ toplevellet:
         var, LetRec (var, $5, $3)
     }
 ;
+directive:
+    | HASHHELP {Help}
+    | HASHEXIT {Exit}
+;
 main:
     | term EOT {Term $1}
     | toplevellet EOT {ToplevelLet $1}
+    | directive EOT {Directive $1}
 ;

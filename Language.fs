@@ -256,6 +256,11 @@ let typeof cxt term =
         substitutions
 
 
+type Directive =
+    | Help
+    | Exit
+
 type Toplevel =
     | Term of Term
     | ToplevelLet of string * Term
+    | Directive of Directive

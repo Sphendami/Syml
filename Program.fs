@@ -75,6 +75,13 @@ let rec repl cxt env =
             | Some value ->
                 value |> openClosure ||> printfn "eval: %s = %A (with %A)" x
                 repl (cxt.Add(x, ty)) (env.Add(x, value))
+    | Directive directive ->
+        match directive with
+        | Help -> printfn "directives:
+    #help;;  :  Show this help message
+    #exit;;  :  Terminate this interactive session"
+        | Exit -> exit 0
+        repl cxt env
 
     
 [<EntryPoint>]
