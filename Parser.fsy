@@ -79,6 +79,13 @@ toplevellet:
             | _ -> failwith "parse error"
         var, $4
     }
+    | LET REC atom EQUAL term {
+        let var =
+            match $3 with
+            | Var s -> s
+            | _ -> failwith "parse error"
+        var, LetRec (var, $5, $3)
+    }
 ;
 main:
     | term EOT {Term $1}
