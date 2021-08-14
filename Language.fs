@@ -61,8 +61,10 @@ and [<StructuredFormatDisplay("{Disp}")>] Value =
 
 let rec openClosure value =
     match value with
-    | Clos (term, env) -> term, env
-    | Prim term -> term, Map.empty
+    | Clos (term, env) ->
+        let keys = env |> Map.toList |> List.unzip |> fst
+        term, keys
+    | Prim term -> term, []
     | Rec vref -> openClosure (!vref)
 
 exception EvaluationException of string
