@@ -28,9 +28,32 @@ let tryEval env term =
         None
 
 
-let rec repl cxt env =
-    printf ":> "
-    let lexbuf = FSharp.Text.Lexing.LexBuffer<_>.FromTextReader stdin
+let rec repl cxt env (scriptToPrepend: string) =
+    let input =
+        seq {
+            yield scriptToPrepend
+
+            let prompt =
+                let mutable called = false
+                fun () ->
+                    if not called then
+                        called <- true
+                        ":> "
+                    else ":  "
+
+            let mutable foundEOT = scriptToPrepend.Contains ";;"
+            while not foundEOT do
+                printf $"{prompt()}"
+                let line = stdin.ReadLine()
+                foundEOT <- line.Contains ";;"
+                yield line
+        }
+        |> String.concat "\n"
+    let splitingIndex = input.IndexOf ";;" + 2
+    let scriptForThisTime = input.Substring(0, splitingIndex)
+    let scriptForNextTime = input.Substring(splitingIndex)
+
+    let lexbuf = FSharp.Text.Lexing.LexBuffer<_>.FromString scriptForThisTime
     let toplevel = 
         try
             Parser.main Lexer.token lexbuf
@@ -51,40 +74,40 @@ let rec repl cxt env =
                 eprintfn "unexpected error:"
                 eprintfn $"{msg}"
                 eprintfn $"{e.StackTrace}"
-            repl cxt env
+            repl cxt env scriptForNextTime
             exit 0
     
     match toplevel with
     | Term term ->
         match tryTypeof cxt term with
-        | None -> repl cxt env
+        | None -> repl cxt env scriptForNextTime
         | Some ty ->
             ty |> printfn "type: %A"
             match tryEval env term with
-            | None -> repl cxt env
+            | None -> repl cxt env scriptForNextTime
             | Some value ->
                 value |> openClosure ||> printfn "eval: %A (with %A)"
-                repl cxt env
+                repl cxt env scriptForNextTime
     | ToplevelLet (x, term) ->
         match tryTypeof cxt term with
-        | None -> repl cxt env
+        | None -> repl cxt env scriptForNextTime
         | Some ty ->
             ty |> printfn "type: %s : %A" x
             match tryEval env term with
-            | None -> repl cxt env
+            | None -> repl cxt env scriptForNextTime
             | Some value ->
                 value |> openClosure ||> printfn "eval: %s = %A (with %A)" x
-                repl (cxt.Add(x, ty)) (env.Add(x, value))
+                repl (cxt.Add(x, ty)) (env.Add(x, value)) scriptForNextTime
     | Directive directive ->
         match directive with
         | Help -> printfn "directives:
     #help;;  :  Show this help message
     #exit;;  :  Terminate this interactive session"
         | Exit -> exit 0
-        repl cxt env
+        repl cxt env scriptForNextTime
 
     
 [<EntryPoint>]
 let main argv =
-    repl Map.empty Map.empty
+    repl Map.empty Map.empty ""
     0
