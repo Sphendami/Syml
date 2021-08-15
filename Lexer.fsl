@@ -14,6 +14,8 @@ rule token = parse
     | "let" {LET}
     | "rec" {REC}
     | "in" {IN}
+    | "#help" {HASHHELP}
+    | "#exit" {HASHEXIT}
     | ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
         {VAR (lexeme lexbuf)}
     | ['+' '-']? ['0'-'9']+ {INTEGER (lexeme lexbuf |> int)}
