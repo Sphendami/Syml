@@ -1,5 +1,10 @@
 %{
 open Language
+
+let openVar var =
+    match var with
+    | Var s -> s
+    | _ -> failwith "parse error"
 %}
 %token <string> VAR
 %token FUN RARROW
@@ -50,53 +55,35 @@ expr:
 ;
 term:
     | expr {$1}
-    | FUN term RARROW term {
-        let arg =
-            match $2 with
-            | Var s -> s
-            | _ -> failwith "parse error"
+    | FUN atom RARROW term {
+        let arg = openVar $2
         Abs (arg, $4)
     }
     | IF term THEN term ELSE term {If ($2, $4, $6)}
     | LET atom EQUAL term IN term {
-        let var =
-            match $2 with
-            | Var s -> s
-            | _ -> failwith "parse error"
-        Let (var, $4, $6)
+        let x = openVar $2
+        Let (x, $4, $6)
     }
     | LET REC atom EQUAL term IN term {
-        let var =
-            match $3 with
-            | Var s -> s
-            | _ -> failwith "parse error"
-        LetRec (var, $5, $7)
+        let x = openVar $3
+        LetRec (x, $5, $7)
     }
 ;
 toplevellet:
     | LET atom EQUAL term {
-        let var =
-            match $2 with
-            | Var s -> s
-            | _ -> failwith "parse error"
-        var, $4
+        let x = openVar $2
+        x, $4
     }
     | LET REC atom EQUAL term {
-        let var =
-            match $3 with
-            | Var s -> s
-            | _ -> failwith "parse error"
-        var, LetRec (var, $5, $3)
+        let x = openVar $3
+        x, LetRec (x, $5, $3)
     }
 ;
 directive:
     | HASHHELP {Help}
     | HASHLOAD atom {
-        let var =
-            match $2 with
-            | Var s -> s
-            | _ -> failwith "parse error"
-        Load var
+        let file = openVar $2
+        Load file
     }
     | HASHEXIT {Exit}
 ;
