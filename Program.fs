@@ -125,9 +125,20 @@ let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
     | Directive directive ->
         match directive with
         | Help ->
-            printfn "directives:
-    #help;;  :  Show this help message
-    #exit;;  :  Terminate this interactive session"
+            printfn "If a file name is given as a command line argument,
+  first it's content is read and evaluated,
+  then move on to the interactive session.
+
+directives:
+    #help;;
+        Show this help message.
+    #load <file-name-w/o-extension>;;
+        Read the file content as input and evaluate it.
+        The file name is resrticted to be the string
+          which can be recognized as an identifier.
+        The extension '.simplang' is apended to the given file name.
+    #exit;;
+        Terminate the interactive session."
             repl cxt env scriptForNextTime reader
         | Load filename ->
             use fileReader = openFileOrStdin (filename + ".simplang")
