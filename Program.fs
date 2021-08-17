@@ -38,20 +38,26 @@ let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
             let prompt =
                 let mutable called = false
                 fun () ->
-                    if not called then
+                    if reader <> stdin then ""
+                    else if not called then
                         called <- true
                         ":> "
                     else ":  "
 
             let mutable foundEOT = scriptToPrepend.Contains ";;"
-            while not foundEOT do
+            let mutable isEOF = false
+            while not foundEOT && not isEOF do
                 printf $"{prompt()}"
-                let line = stdin.ReadLine()
-                foundEOT <- line.Contains ";;"
-                yield line
+                let line = reader.ReadLine()
+                if not (isNull line) then
+                    foundEOT <- line.Contains ";;"
+                    yield line
+                else
+                    isEOF <- true
         }
         |> String.concat "\n"
-    let splitingIndex = input.IndexOf ";;" + 2
+    let splitingIndex =
+        if input.Contains ";;" then input.IndexOf ";;" + 2 else input.Length
     let scriptForThisTime = input.Substring(0, splitingIndex)
     let scriptForNextTime = input.Substring(splitingIndex)
 
@@ -113,5 +119,23 @@ let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
     
 [<EntryPoint>]
 let main argv =
-    repl Map.empty Map.empty "" stdin
+    use reader =
+        if argv.Length = 0 then stdin
+        else
+            try
+                File.OpenText argv.[0] :> TextReader
+            with
+            | :? FileNotFoundException as e ->
+                eprintfn $"No such file: {e.FileName}"
+                eprintfn $"Continue with standard input."
+                stdin
+            | e ->
+                eprintfn "unexpected error:"
+                eprintfn $"{e.Message}"
+                eprintfn $"{e.StackTrace}"
+                printfn ""
+                eprintfn $"Continue with standard input."
+                stdin
+
+    repl Map.empty Map.empty "" reader
     0
