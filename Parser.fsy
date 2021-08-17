@@ -55,7 +55,7 @@ expr:
 ;
 term:
     | expr {$1}
-    | FUN term RARROW term {
+    | FUN atom RARROW term {
         let arg = openVar $2
         Abs (arg, $4)
     }
