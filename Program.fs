@@ -1,3 +1,5 @@
+open System.IO
+
 open Language
 
 
@@ -28,7 +30,7 @@ let tryEval env term =
         None
 
 
-let rec repl cxt env (scriptToPrepend: string) =
+let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
     let input =
         seq {
             yield scriptToPrepend
@@ -74,42 +76,42 @@ let rec repl cxt env (scriptToPrepend: string) =
                 eprintfn "unexpected error:"
                 eprintfn $"{msg}"
                 eprintfn $"{e.StackTrace}"
-            repl cxt env scriptForNextTime
+            repl cxt env scriptForNextTime reader
             exit 0
     
     match toplevel with
     | Term term ->
         match tryTypeof cxt term with
-        | None -> repl cxt env scriptForNextTime
+        | None -> repl cxt env scriptForNextTime reader
         | Some ty ->
             ty |> printfn "type: %A"
             match tryEval env term with
-            | None -> repl cxt env scriptForNextTime
+            | None -> repl cxt env scriptForNextTime reader
             | Some value ->
                 value |> openClosure ||> printfn "eval: %A (with %A)"
-                repl cxt env scriptForNextTime
+                repl cxt env scriptForNextTime reader
     | ToplevelLet (x, term) ->
         match tryTypeof cxt term with
-        | None -> repl cxt env scriptForNextTime
+        | None -> repl cxt env scriptForNextTime reader
         | Some ty ->
             ty |> printfn "type: %s : %A" x
             match tryEval env term with
-            | None -> repl cxt env scriptForNextTime
+            | None -> repl cxt env scriptForNextTime reader
             | Some value ->
                 value |> openClosure ||> printfn "eval: %s = %A (with %A)" x
-                repl (cxt.Add(x, ty)) (env.Add(x, value)) scriptForNextTime
+                repl (cxt.Add(x, ty)) (env.Add(x, value)) scriptForNextTime reader
     | Directive directive ->
         match directive with
         | Help -> printfn "directives:
     #help;;  :  Show this help message
     #exit;;  :  Terminate this interactive session"
         | Exit -> exit 0
-        repl cxt env scriptForNextTime
+        repl cxt env scriptForNextTime reader
     | Eof ->
         ()
 
     
 [<EntryPoint>]
 let main argv =
-    repl Map.empty Map.empty ""
+    repl Map.empty Map.empty "" stdin
     0
