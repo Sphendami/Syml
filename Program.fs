@@ -3,6 +3,22 @@ open System.IO
 open Language
 
 
+let openFileOrStdin filename =
+    try
+        File.OpenText filename :> TextReader
+    with
+    | :? FileNotFoundException as e ->
+        eprintfn $"No such file: {e.FileName}"
+        eprintfn $"Continue with standard input."
+        stdin
+    | e ->
+        eprintfn "unexpected error:"
+        eprintfn $"{e.Message}"
+        eprintfn $"{e.StackTrace}"
+        printfn ""
+        eprintfn $"Continue with standard input."
+        stdin
+
 let tryTypeof cxt term =
     try
         typeof cxt term |> Some
@@ -114,21 +130,7 @@ let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
     #exit;;  :  Terminate this interactive session"
             repl cxt env scriptForNextTime reader
         | Load filename ->
-            use fileReader =
-                try
-                    File.OpenText(filename + ".simplang") :> TextReader
-                with
-                | :? FileNotFoundException as e ->
-                    eprintfn $"No such file: {e.FileName}"
-                    eprintfn $"Continue with standard input."
-                    stdin
-                | e ->
-                    eprintfn "unexpected error:"
-                    eprintfn $"{e.Message}"
-                    eprintfn $"{e.StackTrace}"
-                    printfn ""
-                    eprintfn $"Continue with standard input."
-                    stdin
+            use fileReader = openFileOrStdin (filename + ".simplang")
             repl cxt env scriptForNextTime fileReader
         | Exit -> exit 0
     | Eof ->
@@ -140,20 +142,7 @@ let main argv =
     use reader =
         if argv.Length = 0 then stdin
         else
-            try
-                File.OpenText argv.[0] :> TextReader
-            with
-            | :? FileNotFoundException as e ->
-                eprintfn $"No such file: {e.FileName}"
-                eprintfn $"Continue with standard input."
-                stdin
-            | e ->
-                eprintfn "unexpected error:"
-                eprintfn $"{e.Message}"
-                eprintfn $"{e.StackTrace}"
-                printfn ""
-                eprintfn $"Continue with standard input."
-                stdin
+            openFileOrStdin argv.[0]
 
     repl Map.empty Map.empty "" reader
     0
