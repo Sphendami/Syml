@@ -33,4 +33,4 @@ rule token = parse
     | "->" {RARROW}
     | '(' {LPAREN}
     | ')' {RPAREN}
-    | eof {EOT}
+    | eof {EOF}

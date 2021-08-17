@@ -13,6 +13,7 @@ open Language
 %token LET REC IN
 %token HASHHELP HASHEXIT
 %token EOT
+%token EOF
 
 %left ANDAND PIPEPIPE
 %left EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
@@ -96,4 +97,5 @@ main:
     | term EOT {Term $1}
     | toplevellet EOT {ToplevelLet $1}
     | directive EOT {Directive $1}
+    | EOF {Eof}
 ;

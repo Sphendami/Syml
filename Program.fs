@@ -105,6 +105,8 @@ let rec repl cxt env (scriptToPrepend: string) =
     #exit;;  :  Terminate this interactive session"
         | Exit -> exit 0
         repl cxt env scriptForNextTime
+    | Eof ->
+        ()
 
     
 [<EntryPoint>]
