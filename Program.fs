@@ -108,13 +108,31 @@ let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
                 repl (cxt.Add(x, ty)) (env.Add(x, value)) scriptForNextTime reader
     | Directive directive ->
         match directive with
-        | Help -> printfn "directives:
+        | Help ->
+            printfn "directives:
     #help;;  :  Show this help message
     #exit;;  :  Terminate this interactive session"
+            repl cxt env scriptForNextTime reader
+        | Load filename ->
+            use fileReader =
+                try
+                    File.OpenText(filename + ".simplang") :> TextReader
+                with
+                | :? FileNotFoundException as e ->
+                    eprintfn $"No such file: {e.FileName}"
+                    eprintfn $"Continue with standard input."
+                    stdin
+                | e ->
+                    eprintfn "unexpected error:"
+                    eprintfn $"{e.Message}"
+                    eprintfn $"{e.StackTrace}"
+                    printfn ""
+                    eprintfn $"Continue with standard input."
+                    stdin
+            repl cxt env scriptForNextTime fileReader
         | Exit -> exit 0
-        repl cxt env scriptForNextTime reader
     | Eof ->
-        ()
+        repl cxt env scriptForNextTime stdin
 
     
 [<EntryPoint>]

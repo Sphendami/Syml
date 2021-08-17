@@ -258,6 +258,7 @@ let typeof cxt term =
 
 type Directive =
     | Help
+    | Load of string
     | Exit
 
 type Toplevel =
