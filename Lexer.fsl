@@ -15,6 +15,7 @@ rule token = parse
     | "rec" {REC}
     | "in" {IN}
     | "#help" {HASHHELP}
+    | "#load" {HASHLOAD}
     | "#exit" {HASHEXIT}
     | ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
         {VAR (lexeme lexbuf)}
@@ -33,4 +34,4 @@ rule token = parse
     | "->" {RARROW}
     | '(' {LPAREN}
     | ')' {RPAREN}
-    | eof {EOT}
+    | eof {EOF}

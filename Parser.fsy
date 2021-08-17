@@ -11,8 +11,9 @@ open Language
 %token ANDAND PIPEPIPE
 %token EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
 %token LET REC IN
-%token HASHHELP HASHEXIT
+%token HASHHELP HASHLOAD HASHEXIT
 %token EOT
+%token EOF
 
 %left ANDAND PIPEPIPE
 %left EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
@@ -90,10 +91,18 @@ toplevellet:
 ;
 directive:
     | HASHHELP {Help}
+    | HASHLOAD atom {
+        let var =
+            match $2 with
+            | Var s -> s
+            | _ -> failwith "parse error"
+        Load var
+    }
     | HASHEXIT {Exit}
 ;
 main:
     | term EOT {Term $1}
     | toplevellet EOT {ToplevelLet $1}
     | directive EOT {Directive $1}
+    | EOF {Eof}
 ;
