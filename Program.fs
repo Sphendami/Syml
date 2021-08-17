@@ -134,6 +134,7 @@ let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
             repl cxt env scriptForNextTime fileReader
         | Exit -> exit 0
     | Eof ->
+        reader.Close()
         repl cxt env scriptForNextTime stdin
 
     
