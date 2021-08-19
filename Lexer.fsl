@@ -9,6 +9,7 @@ let newline (lexbuf:FSharp.Text.Lexing.LexBuffer<_>) =
 rule token = parse
     [' ' '\t'] {token lexbuf}
     | '\n' {newline lexbuf; token lexbuf}
+    | "//" [^'\n']* {newline lexbuf; token lexbuf}
     | ";;" {EOT}
     | "true" {TRUE}
     | "false" {FALSE}
