@@ -91,7 +91,7 @@ let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
             | "parse error" ->
                 let token = System.String lexbuf.Lexeme
                 let position = lexbuf.StartPos
-                let posLine = position.Line + 1
+                let posLine = position.Line
                 let posChar = position.Column + 1
                 eprintfn $"parsing error: \"{token}\" @line {posLine}, char {posChar}"
             | msg ->
