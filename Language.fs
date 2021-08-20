@@ -7,8 +7,11 @@ type BinOp =
     | And | Or
     | Equal | Lt | Gt | Lte | Gte
 
+type TermInfo =
+    int * int
+
 [<StructuredFormatDisplay("{Disp}")>]
-type Term =
+type TermTree =
     | Var of string
     | Abs of string * Term
     | App of Term * Term
@@ -45,6 +48,12 @@ type Term =
             | Let (x, t1, t2) -> $"let %s{x} = %A{t1} in %A{t2}"
             | LetRec (x, t1, t2) -> $"let rec %s{x} = %A{t1} in %A{t2}"
         member this.Disp = this.ToString()
+and [<StructuredFormatDisplay("{Disp}")>] Term =
+    {TermTree: TermTree; TermInfo: TermInfo}
+    with
+        override this.ToString() =
+            this.TermTree.ToString()
+        member this.Disp = this.ToString()
 
 type Env = Map<string, Value>
 and [<StructuredFormatDisplay("{Disp}")>] Value =
@@ -71,8 +80,11 @@ exception EvaluationException of string
 let evaluationException msg = raise (EvaluationException msg)
 
 
+type TypeInfo =
+    Term option
+
 [<StructuredFormatDisplay("{Disp}")>]
-type Type =
+type TypeTree =
     | TyVar of string
     | Fun of Type * Type
     | Bool
@@ -89,8 +101,15 @@ type Type =
         member this.HasTyVar name =
             match this with
             | TyVar s -> s = name
-            | Fun (t1, t2) -> t1.HasTyVar name || t2.HasTyVar name
+            | Fun (t1, t2) ->
+                t1.TypeTree.HasTyVar name || t2.TypeTree.HasTyVar name
             | Bool | Int -> false
+and [<StructuredFormatDisplay("{Disp}")>] Type =
+    {TypeTree: TypeTree; TypeInfo: TypeInfo}
+    with
+        override this.ToString() =
+            this.TypeTree.ToString()
+        member this.Disp = this.ToString()
 
 type Context = Map<string, Type>
 
@@ -102,40 +121,40 @@ exception TypingException of string
 let typingException msg = raise (TypingException msg)
 
 
-let rec evalR (env: Env) term =
-    match term with
+let rec evalR (env: Env) (term: Term) =
+    match term.TermTree with
     | Var s ->
         match Map.tryFind s env with
         | Some value -> value
         | None -> evaluationException "internal error: unbound variable"
-    | Abs _ as t -> Clos (t, env)
+    | Abs _ -> Clos (term, env)
     | App (t1, t2) ->
         let v1' = evalR env t1
         match v1' with
-        | Clos (Abs (x, t1'Body), env') ->
+        | Clos ({TermTree = Abs (x, t1'Body)}, env') ->
             let v2' = evalR env t2
             evalR (env'.Add(x, v2')) t1'Body
         | Rec vref ->
             match !vref with
-            | Clos (Abs (x, t1'Body), env') ->
+            | Clos ({TermTree = Abs (x, t1'Body)}, env') ->
                 let v2' = evalR env t2
                 evalR (env'.Add(x, v2')) t1'Body
             | _ -> evaluationException "internal error: cannot apply"
         | _ -> evaluationException "internal error: cannot apply"
-    | Boolean _ | Integer _ as t -> Prim t
+    | Boolean _ | Integer _ -> Prim term
     | If (c, t, e) ->
         let vc = evalR env c
         match vc with
-        | Prim (Boolean true) ->
+        | Prim {TermTree = Boolean true} ->
             evalR env t
-        | Prim (Boolean false) ->
+        | Prim {TermTree = Boolean false} ->
             evalR env e
         | _ -> evaluationException "internal error: non-Boolean condition"
     | BinaryOp (op, t1, t2) ->
         let t1' = evalR env t1
         let t2' = evalR env t2
         match t1', t2' with
-        | Prim (Integer i1), Prim (Integer i2) ->
+        | Prim {TermTree = Integer i1; TermInfo = t1'TermInfo}, Prim {TermTree = Integer i2} ->
             let termBuilder =
                 match op with
                 | Add -> ( + ) ||>> Integer
@@ -148,20 +167,20 @@ let rec evalR (env: Env) term =
                 | Lte -> ( <= ) ||>> Boolean
                 | Gte -> ( >= ) ||>> Boolean
                 | _ -> evaluationException "internal error: non-Integer operator"
-            Prim (termBuilder i1 i2)
-        | Prim (Boolean b1), Prim (Boolean b2) ->
+            Prim {TermTree = termBuilder i1 i2; TermInfo = t1'TermInfo}
+        | Prim {TermTree = Boolean b1; TermInfo = t1'TermInfo}, Prim {TermTree = Boolean b2} ->
             let termBuilder =
                 match op with
                 | And -> ( && ) ||>> Boolean
                 | Or -> ( || ) ||>> Boolean
                 | _ -> evaluationException "internal error: non-Boolean operator"
-            Prim (termBuilder b1 b2)
+            Prim {TermTree = termBuilder b1 b2; TermInfo = t1'TermInfo}
         | _ -> evaluationException "internal error: unexpected operands"
     | Let (x, t1, t2) ->
         let v1 = evalR env t1
         evalR (env.Add(x, v1)) t2
     | LetRec (x, t1, t2) ->
-        let dummy = Prim (Integer 0)
+        let dummy = Prim {TermTree = Integer 0; TermInfo = (0, 0)}
         let vref = ref dummy
         let v1 = evalR (env.Add(x, Rec vref)) t1
         vref := v1
@@ -169,14 +188,17 @@ let rec evalR (env: Env) term =
 let eval = evalR Map.empty
 
 
+// let updateTypeInfo (Type (ty, _)) info =
+//     Type (ty, info)
+
 let genFreshTyVar =
     let mutable i = -1
     fun () ->
         i <- i + 1
-        TyVar $"T{i}"
+        {TypeTree = TyVar $"T{i}"; TypeInfo = None}
 
-let rec collectConstr (cxt: Context) term =
-    match term with
+let rec collectConstr (cxt: Context) (term: Term) =
+    match term.TermTree with
     | Var s ->
         match Map.tryFind s cxt with
         | Some ty -> ty, []
@@ -184,47 +206,51 @@ let rec collectConstr (cxt: Context) term =
     | Abs (x, body) ->
         let xType = genFreshTyVar()
         let bodyType, constr = collectConstr (cxt.Add(x, xType)) body
-        Fun (xType, bodyType), constr
+        {TypeTree = Fun (xType, bodyType); TypeInfo = Some term}, constr
     | App (t1, t2) ->
         let t1Type, t1Constr = collectConstr cxt t1
         let t2Type, t2Constr = collectConstr cxt t2
         let wholeType = genFreshTyVar()
-        wholeType, Eq (t1Type, Fun (t2Type, wholeType)) :: t1Constr @ t2Constr
-    | Boolean _ -> Bool, []
-    | Integer _ -> Int, []
+        wholeType, Eq (t1Type, {TypeTree = Fun (t2Type, wholeType); TypeInfo = None}) :: t1Constr @ t2Constr
+    | Boolean _ -> {TypeTree = Bool; TypeInfo = Some term}, []
+    | Integer _ -> {TypeTree = Int; TypeInfo = Some term}, []
     | If (c, t, e) ->
         let cType, cConstr = collectConstr cxt c
         let tType, tConstr = collectConstr cxt t
         let eType, eConstr = collectConstr cxt e
-        tType, Eq (cType, Bool) :: Eq (tType, eType) :: cConstr @ tConstr @ eConstr
+        {TypeTree = tType.TypeTree; TypeInfo = Some term},
+        Eq (cType, {TypeTree = Bool; TypeInfo = None}) :: Eq (tType, eType) :: cConstr @ tConstr @ eConstr
     | BinaryOp (op, t1, t2) ->
         let t1Type, t1Constr = collectConstr cxt t1
         let t2Type, t2Constr = collectConstr cxt t2
         match op with
         | Add | Sub | Mul | Div ->
-            Int, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
+            {TypeTree = Int; TypeInfo = Some term},
+            Eq (t1Type, {TypeTree = Int; TypeInfo = None}) :: Eq (t2Type, {TypeTree = Int; TypeInfo = None}) :: t1Constr @ t2Constr
         | And | Or ->
-            Bool, Eq (t1Type, Bool) :: Eq (t2Type, Bool) :: t1Constr @ t2Constr
+            {TypeTree = Bool; TypeInfo = Some term},
+            Eq (t1Type, {TypeTree = Bool; TypeInfo = None}) :: Eq (t2Type, {TypeTree = Bool; TypeInfo = None}) :: t1Constr @ t2Constr
         | Equal | Lt | Gt | Lte | Gte ->
-            Bool, Eq (t1Type, Int) :: Eq (t2Type, Int) :: t1Constr @ t2Constr
+            {TypeTree = Bool; TypeInfo = Some term},
+            Eq (t1Type, {TypeTree = Int; TypeInfo = None}) :: Eq (t2Type, {TypeTree = Int; TypeInfo = None}) :: t1Constr @ t2Constr
     | Let (x, t1, t2) ->
         let t1Type, t1Constr = collectConstr cxt t1
         let t2Type, t2Constr = collectConstr (cxt.Add(x, t1Type)) t2
-        t2Type, t1Constr @ t2Constr
+        {TypeTree = t2Type.TypeTree; TypeInfo = Some term}, t1Constr @ t2Constr
     | LetRec (x, t1, t2) ->
         let xType = genFreshTyVar()
         let t1Type, t1Constr = collectConstr (cxt.Add(x, xType)) t1
         let t2Type, t2Constr = collectConstr (cxt.Add(x, xType)) t2
-        t2Type, Eq (xType, t1Type) :: t1Constr @ t2Constr
+        {TypeTree = t2Type.TypeTree; TypeInfo = Some term}, Eq (xType, t1Type) :: t1Constr @ t2Constr
 
 let rec substType (MapsTo (replacedTyVarName, insertedType) as substitution) targetType =
-    match targetType with
-    | TyVar s as tv -> if s = replacedTyVarName then insertedType else tv
+    match targetType.TypeTree with
+    | TyVar s -> if s = replacedTyVarName then insertedType else targetType
     | Fun (ty1, ty2) ->
         let ty1' = substType substitution ty1
         let ty2' = substType substitution ty2
-        Fun (ty1', ty2')
-    | Bool | Int as ty -> ty
+        {TypeTree = Fun (ty1', ty2'); TypeInfo = targetType.TypeInfo}
+    | Bool | Int -> targetType
 
 let substConstr substitution constr =
     let subst = substType substitution
@@ -234,12 +260,12 @@ let rec unify constraints =
     match constraints with
     | [] -> []
     | Eq (ty1, ty2) :: constrs ->
-        match (ty1, ty2) with
-        | (ty1, ty2) when ty1 = ty2 -> unify constrs
-        | (TyVar s, ty2) when not (ty2.HasTyVar s) ->
+        match (ty1.TypeTree, ty2.TypeTree) with
+        | (tyTree1, tyTree2) when tyTree1 = tyTree2 -> unify constrs
+        | (TyVar s, tyTree2) when not (tyTree2.HasTyVar s) ->
             let constrs' = substConstr (MapsTo (s, ty2)) constrs
             MapsTo (s, ty2) :: unify constrs'
-        | (ty1, TyVar s) when not (ty1.HasTyVar s) ->
+        | (tyTree1, TyVar s) when not (tyTree1.HasTyVar s) ->
             let constrs' = substConstr (MapsTo (s, ty1)) constrs
             MapsTo (s, ty1) :: unify constrs'
         | (Fun (ty11, ty12), Fun (ty21, ty22)) ->

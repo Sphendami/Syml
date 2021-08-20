@@ -1,23 +1,26 @@
 %{
 open Language
 
-let openVar var =
-    match var with
+let createTerm info termTree =
+    {TermTree = termTree; TermInfo = info}
+
+let openVar (var: Term) =
+    match var.TermTree with
     | Var s -> s
     | _ -> failwith "parse error"
 %}
-%token <string> VAR
-%token FUN RARROW
-%token LPAREN RPAREN
-%token TRUE FALSE
-%token IF THEN ELSE
-%token <int> INTEGER
-%token PLUS MINUS STAR SLASH
-%token ANDAND PIPEPIPE
-%token EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
-%token LET REC IN
-%token HASHHELP HASHLOAD HASHEXIT
-%token EOT
+%token <string * Language.TermInfo> VAR
+%token <Language.TermInfo> FUN RARROW
+%token <Language.TermInfo> LPAREN RPAREN
+%token <Language.TermInfo> TRUE FALSE
+%token <Language.TermInfo> IF THEN ELSE
+%token <int * Language.TermInfo> INTEGER
+%token <Language.TermInfo> PLUS MINUS STAR SLASH
+%token <Language.TermInfo> ANDAND PIPEPIPE
+%token <Language.TermInfo> EQUAL LESSTHAN GREATERTHAN LESSTHANEQ GREATERTHANEQ
+%token <Language.TermInfo> LET REC IN
+%token <Language.TermInfo> HASHHELP HASHLOAD HASHEXIT
+%token <Language.TermInfo> EOT
 %token EOF
 
 %left ANDAND PIPEPIPE
@@ -30,56 +33,62 @@ let openVar var =
 %type <Language.Toplevel> main
 %%
 atom:
-    | TRUE {Boolean true}
-    | FALSE {Boolean false}
-    | INTEGER {Integer $1}
-    | LPAREN term RPAREN {$2}
-    | VAR {Var $1}
+    | TRUE {Boolean true |> createTerm $1}
+    | FALSE {Boolean false |> createTerm $1}
+    | INTEGER {
+        let i, pos = $1
+        Integer i |> createTerm pos
+    }
+    | LPAREN term RPAREN {$2.TermTree |> createTerm $1}
+    | VAR {
+        let s, pos = $1
+        Var s |> createTerm pos
+    }
 ;
 applist:
     | atom {$1}
-    | applist atom {App ($1, $2)}
+    | applist atom {App ($1, $2) |> createTerm $1.TermInfo}
 ;
 expr:
     | applist {$1}
-    | PLUS expr %prec UPLUS {$2}
-    | MINUS expr %prec UMINUS {BinaryOp (Sub, Integer 0, $2)}
-    | expr PLUS expr {BinaryOp (Add, $1, $3)}
-    | expr MINUS expr {BinaryOp (Sub, $1, $3)}
-    | expr STAR expr {BinaryOp (Mul, $1, $3)}
-    | expr SLASH expr {BinaryOp (Div, $1, $3)}
-    | expr ANDAND expr {BinaryOp (And, $1, $3)}
-    | expr PIPEPIPE expr {BinaryOp (Or, $1, $3)}
-    | expr EQUAL expr {BinaryOp (Equal, $1, $3)}
-    | expr LESSTHAN expr {BinaryOp (Lt, $1, $3)}
-    | expr GREATERTHAN expr {BinaryOp (Gt, $1, $3)}
-    | expr LESSTHANEQ expr {BinaryOp (Lte, $1, $3)}
-    | expr GREATERTHANEQ expr {BinaryOp (Gte, $1, $3)}
+    | PLUS expr %prec UPLUS {$2.TermTree |> createTerm $1}
+    | MINUS expr %prec UMINUS {BinaryOp (Sub, {TermTree = Integer 0; TermInfo = $1}, $2) |> createTerm $1}
+    | expr PLUS expr {BinaryOp (Add, $1, $3) |> createTerm $1.TermInfo}
+    | expr MINUS expr {BinaryOp (Sub, $1, $3) |> createTerm $1.TermInfo}
+    | expr STAR expr {BinaryOp (Mul, $1, $3) |> createTerm $1.TermInfo}
+    | expr SLASH expr {BinaryOp (Div, $1, $3) |> createTerm $1.TermInfo}
+    | expr ANDAND expr {BinaryOp (And, $1, $3) |> createTerm $1.TermInfo}
+    | expr PIPEPIPE expr {BinaryOp (Or, $1, $3) |> createTerm $1.TermInfo}
+    | expr EQUAL expr {BinaryOp (Equal, $1, $3) |> createTerm $1.TermInfo}
+    | expr LESSTHAN expr {BinaryOp (Lt, $1, $3) |> createTerm $1.TermInfo}
+    | expr GREATERTHAN expr {BinaryOp (Gt, $1, $3) |> createTerm $1.TermInfo}
+    | expr LESSTHANEQ expr {BinaryOp (Lte, $1, $3) |> createTerm $1.TermInfo}
+    | expr GREATERTHANEQ expr {BinaryOp (Gte, $1, $3) |> createTerm $1.TermInfo}
 ;
 term:
     | expr {$1}
     | FUN atom RARROW term {
         let arg = openVar $2
-        Abs (arg, $4)
+        Abs (arg, $4) |> createTerm $1
     }
-    | IF term THEN term ELSE term {If ($2, $4, $6)}
+    | IF term THEN term ELSE term {If ($2, $4, $6) |> createTerm $1}
     | LET atom EQUAL term IN term {
         let x = openVar $2
-        Let (x, $4, $6)
+        Let (x, $4, $6) |> createTerm $1
     }
     | LET REC atom EQUAL term IN term {
         let x = openVar $3
-        LetRec (x, $5, $7)
+        LetRec (x, $5, $7) |> createTerm $1
     }
 ;
 toplevellet:
     | LET atom EQUAL term {
         let x = openVar $2
-        x, $4
+        x, $4.TermTree |> createTerm $1
     }
     | LET REC atom EQUAL term {
         let x = openVar $3
-        x, LetRec (x, $5, $3)
+        x, LetRec (x, $5, $3) |> createTerm $1
     }
 ;
 directive:
