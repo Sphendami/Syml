@@ -5,39 +5,45 @@ let lexeme = FSharp.Text.Lexing.LexBuffer<_>.LexemeString
 
 let newline (lexbuf:FSharp.Text.Lexing.LexBuffer<_>) =
     lexbuf.EndPos <- lexbuf.EndPos.NextLine
+
+let currPos (lexbuf:FSharp.Text.Lexing.LexBuffer<_>) =
+    let position = lexbuf.StartPos
+    let posLine = position.Line
+    let posChar = position.Column + 1
+    posLine, posChar
 }
 rule token = parse
     [' ' '\t'] {token lexbuf}
     | '\n' {newline lexbuf; token lexbuf}
     | "//" [^'\n']* {newline lexbuf; token lexbuf}
-    | ";;" {EOT}
-    | "true" {TRUE}
-    | "false" {FALSE}
-    | "if" {IF}
-    | "then" {THEN}
-    | "else" {ELSE}
-    | "fun" {FUN}
-    | "let" {LET}
-    | "rec" {REC}
-    | "in" {IN}
-    | "#help" {HASHHELP}
-    | "#load" {HASHLOAD}
-    | "#exit" {HASHEXIT}
+    | ";;" {EOT (currPos lexbuf)}
+    | "true" {TRUE (currPos lexbuf)}
+    | "false" {FALSE (currPos lexbuf)}
+    | "if" {IF (currPos lexbuf)}
+    | "then" {THEN (currPos lexbuf)}
+    | "else" {ELSE (currPos lexbuf)}
+    | "fun" {FUN (currPos lexbuf)}
+    | "let" {LET (currPos lexbuf)}
+    | "rec" {REC (currPos lexbuf)}
+    | "in" {IN (currPos lexbuf)}
+    | "#help" {HASHHELP (currPos lexbuf)}
+    | "#load" {HASHLOAD (currPos lexbuf)}
+    | "#exit" {HASHEXIT (currPos lexbuf)}
     | ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
-        {VAR (lexeme lexbuf)}
-    | ['+' '-']? ['0'-'9']+ {INTEGER (lexeme lexbuf |> int)}
-    | '+' {PLUS}
-    | '-' {MINUS}
-    | '*' {STAR}
-    | '/' {SLASH}
-    | "&&" {ANDAND}
-    | "||" {PIPEPIPE}
-    | '=' {EQUAL}
-    | '<' {LESSTHAN}
-    | '>' {GREATERTHAN}
-    | "<=" {LESSTHANEQ}
-    | ">=" {GREATERTHANEQ}
-    | "->" {RARROW}
-    | '(' {LPAREN}
-    | ')' {RPAREN}
+        {VAR (lexeme lexbuf, currPos lexbuf)}
+    | ['+' '-']? ['0'-'9']+ {INTEGER (lexeme lexbuf |> int, currPos lexbuf)}
+    | '+' {PLUS (currPos lexbuf)}
+    | '-' {MINUS (currPos lexbuf)}
+    | '*' {STAR (currPos lexbuf)}
+    | '/' {SLASH (currPos lexbuf)}
+    | "&&" {ANDAND (currPos lexbuf)}
+    | "||" {PIPEPIPE (currPos lexbuf)}
+    | '=' {EQUAL (currPos lexbuf)}
+    | '<' {LESSTHAN (currPos lexbuf)}
+    | '>' {GREATERTHAN (currPos lexbuf)}
+    | "<=" {LESSTHANEQ (currPos lexbuf)}
+    | ">=" {GREATERTHANEQ (currPos lexbuf)}
+    | "->" {RARROW (currPos lexbuf)}
+    | '(' {LPAREN (currPos lexbuf)}
+    | ')' {RPAREN (currPos lexbuf)}
     | eof {EOF}
