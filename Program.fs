@@ -93,7 +93,7 @@ let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
                 let position = lexbuf.StartPos
                 let posLine = position.Line
                 let posChar = position.Column + 1
-                eprintfn $"parsing error: \"{token}\" @line {posLine}, char {posChar}"
+                eprintfn $"parsing error: `{token}` @line {posLine}, char {posChar}"
             | msg ->
                 eprintfn "unexpected error:"
                 eprintfn $"{msg}"
