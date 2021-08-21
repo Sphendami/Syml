@@ -8,7 +8,7 @@ let newline (lexbuf:FSharp.Text.Lexing.LexBuffer<_>) =
 
 let currPos (lexbuf:FSharp.Text.Lexing.LexBuffer<_>) =
     let position = lexbuf.StartPos
-    let posLine = position.Line + 1
+    let posLine = position.Line
     let posChar = position.Column + 1
     posLine, posChar
 }
