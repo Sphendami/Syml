@@ -9,6 +9,8 @@ type BinOp =
 
 type TermInfo =
     int * int
+let infoToString (info: TermInfo) =
+    $"line {fst info}, char {snd info}"
 
 [<StructuredFormatDisplay("{Disp}")>]
 type TermTree =
@@ -202,7 +204,7 @@ let rec collectConstr (cxt: Context) (term: Term) =
     | Var s ->
         match Map.tryFind s cxt with
         | Some ty -> ty, []
-        | None -> typingException "unbound variable"
+        | None -> typingException $"unbound variable: `%A{term}` @{infoToString term.TermInfo}"
     | Abs (x, body) ->
         let xType = genFreshTyVar()
         let bodyType, constr = collectConstr (cxt.Add(x, xType)) body
@@ -271,7 +273,18 @@ let rec unify constraints =
         | (Fun (ty11, ty12), Fun (ty21, ty22)) ->
             let constrs' = Eq (ty11, ty21) :: Eq (ty12, ty22) :: constrs
             unify constrs'
-        | _ -> typingException "type mismatch"
+        | _ ->
+            let msg = 
+                match (ty1.TypeInfo, ty2.TypeInfo) with
+                | (Some t1, Some t2) ->
+                    $"type mismatch: `%A{t1}` : %A{ty1} @{infoToString t1.TermInfo} vs `%A{t2}` : %A{ty2} @{infoToString t2.TermInfo}"
+                | (Some t1, None) ->
+                    $"type mismatch: `%A{t1}` : %A{ty1} @{infoToString t1.TermInfo} but should be %A{ty2}"
+                | (None, Some t2) ->
+                    $"type mismatch: `%A{t2}` : %A{ty2} @{infoToString t2.TermInfo} but should be %A{ty1}"
+                | (None, None) ->
+                    $"type mismatch: %A{ty1} vs %A{ty2}"
+            typingException msg
 
 let typeof cxt term =
     let baseType, constraints = collectConstr cxt term
