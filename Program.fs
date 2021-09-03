@@ -136,12 +136,12 @@ directives:
         Read the file content as input and evaluate it.
         The file name is resrticted to be the string
           which can be recognized as an identifier.
-        The extension '.simplang' is apended to the given file name.
+        The extension '.syml' is apended to the given file name.
     #exit;;
         Terminate the interactive session."
             repl cxt env scriptForNextTime reader
         | Load filename ->
-            use fileReader = openFileOrStdin (filename + ".simplang")
+            use fileReader = openFileOrStdin (filename + ".syml")
             repl cxt env scriptForNextTime fileReader
         | Exit -> exit 0
     | Eof ->
