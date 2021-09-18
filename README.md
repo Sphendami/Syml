@@ -41,8 +41,8 @@ T ::=
 # Type
 ```
 Ty ::=
-      | Bool            boolean type
-      | Int             integer type
+      | ^?            boolean type
+      | ^#             integer type
       | Ty -> Ty        function type
 ```
 
@@ -71,8 +71,8 @@ Put `##?;;` on the interactive session to show details.
 :       : $# * $! ($# - #-)
 :  ;
 :  $! #-_-;;
-type: Int
-eval: 120 (with [])
+type: ^#
+eval: #----___ (with [])
 ```
 
 " `(with [])` " shows currently bounded variable names (empty in this example.)

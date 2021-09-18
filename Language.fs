@@ -27,11 +27,14 @@ type TermTree =
         override this.ToString() =
             match this with
             | Var s -> s
-            | Abs (x, body) -> $"fun %s{x} -> %A{body}"
+            | Abs (x, body) -> $"\\%s{x} -> %A{body}"
             | App (t1, t2) -> $"(%A{t1}) (%A{t2})"
-            | Boolean b -> $"{b}".ToLower()
-            | Integer i -> $"{i}"
-            | If (c, t, e) -> $"if %A{c} then %A{t} else %A{e}"
+            | Boolean b -> if b then "?+" else "?-"
+            | Integer i ->
+                System.Convert.ToString(i, 2)
+                |> String.map (fun c -> if c = '0' then '_' else '-')
+                |> (fun s -> "#" + s)
+            | If (c, t, e) -> $"%A{c} ? %A{t} : %A{e}"
             | BinaryOp (op, t1, t2) ->
                 let opSymb =
                     match op with
@@ -47,8 +50,8 @@ type TermTree =
                     | Lte -> "<="
                     | Gte -> ">="
                 $"(%A{t1}) {opSymb} (%A{t2})"
-            | Let (x, t1, t2) -> $"let %s{x} = %A{t1} in %A{t2}"
-            | LetRec (x, t1, t2) -> $"let rec %s{x} = %A{t1} in %A{t2}"
+            | Let (x, t1, t2) -> $"!! %s{x} = %A{t1} ; %A{t2}"
+            | LetRec (x, t1, t2) -> $"!!^ %s{x} = %A{t1} ; %A{t2}"
         member this.Disp = this.ToString()
 and [<StructuredFormatDisplay("{Disp}")>] Term =
     {TermTree: TermTree; TermInfo: TermInfo}
@@ -96,8 +99,8 @@ type TypeTree =
             match this with
             | TyVar s -> s
             | Fun (t1, t2) -> $"(%A{t1})->%A{t2}"
-            | Bool -> "Bool"
-            | Int -> "Int"
+            | Bool -> "^?"
+            | Int -> "^#"
         member this.Disp = this.ToString()
 
         member this.HasTyVar name =
@@ -197,7 +200,10 @@ let genFreshTyVar =
     let mutable i = -1
     fun () ->
         i <- i + 1
-        {TypeTree = TyVar $"T{i}"; TypeInfo = None}
+        let iSym =
+            System.Convert.ToString(i, 2)
+            |> String.map (fun c -> if c = '0' then '_' else '-')
+        {TypeTree = TyVar $"^{iSym}"; TypeInfo = None}
 
 let rec collectConstr (cxt: Context) (term: Term) =
     match term.TermTree with
