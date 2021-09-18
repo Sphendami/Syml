@@ -130,18 +130,24 @@ let rec repl cxt env (scriptToPrepend: string) (reader: TextReader) =
   then move on to the interactive session.
 
 directives:
-    #help;;
+    ##?;;
         Show this help message.
-    #load <file-name-w/o-extension>;;
+    ##<< $<file-name-w/o-extension> ;;
         Read the file content as input and evaluate it.
         The file name is resrticted to be the string
-          which can be recognized as an identifier.
+          which can be recognized as an identifier,
+          i.e. only symbols can be used in the file name
+          (be careful that some symbols are not allowed to
+          be used in file names.)
+          Note that `$` is prepended to the file name
+          and a space is needed to split the file name and `;;`
+          due some technical reasons.
         The extension '.syml' is apended to the given file name.
-    #exit;;
+    ##><;;
         Terminate the interactive session."
             repl cxt env scriptForNextTime reader
         | Load filename ->
-            use fileReader = openFileOrStdin (filename + ".syml")
+            use fileReader = openFileOrStdin (filename.[1..filename.Length-1] + ".syml")
             repl cxt env scriptForNextTime fileReader
         | Exit -> exit 0
     | Eof ->

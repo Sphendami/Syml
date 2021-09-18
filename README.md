@@ -57,11 +57,11 @@ Ty ::=
 - `!!^ x = T`
 
 # Directives
-- `#help`
-- `#load`
-- `#exit`
+- `##?`
+- `##<<`
+- `##><`
 
-Put `#help;;` on the interactive session to show details.
+Put `##?;;` on the interactive session to show details.
 
 # Example
 ```

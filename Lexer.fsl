@@ -26,9 +26,9 @@ rule token = parse
     | "!!" {LET (currPos lexbuf)}
     | "^" {REC (currPos lexbuf)}
     | ";" {IN (currPos lexbuf)}
-    | "#help" {HASHHELP (currPos lexbuf)}
-    | "#load" {HASHLOAD (currPos lexbuf)}
-    | "#exit" {HASHEXIT (currPos lexbuf)}
+    | "##?" {HASHHELP (currPos lexbuf)}
+    | "##<<" {HASHLOAD (currPos lexbuf)}
+    | "##><" {HASHEXIT (currPos lexbuf)}
     | '$' ['!' '?' '\'' '"' '`' '+' '-' '=' '(' ')' '[' ']' '{' '}' '<' '>' ';' ':' ',' '.' '@' '#' '$' '%' '&' '~' '|' '*' '^' '_' '/' '\\']*
         {VAR (lexeme lexbuf, currPos lexbuf)}
     | '#' ['_' '-']+ {
