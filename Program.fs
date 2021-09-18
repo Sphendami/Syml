@@ -137,12 +137,13 @@ directives:
         The file name is resrticted to be the string
           which can be recognized as an identifier,
           i.e. only symbols can be used in the file name
-          (be careful that some symbols are not allowed to
+          (be careful that some symbols (depending on your OS
+          and your environment) are not allowed to
           be used in file names.)
           Note that `$` is prepended to the file name
           and a space is needed to split the file name and `;;`
           due some technical reasons.
-        The extension '.syml' is apended to the given file name.
+        The extension of the file should be '.syml'.
     ##><;;
         Terminate the interactive session."
             repl cxt env scriptForNextTime reader

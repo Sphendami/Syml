@@ -83,7 +83,7 @@ eval: #----___ (with [])
 - Line number in error message becomes wrong in a certain case.
 - Type error explanation in a certain case is unclear.
 
-# Tips
+# Tip
 When you are confused by the error message like below,
 
 ```
