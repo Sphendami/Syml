@@ -1,4 +1,4 @@
-Joke programming language where available characters to write its sourse codes are symbols only
+Joke programming language where available characters to write its source codes are symbols only
 
 # Usage
 .NET environemnt is required.
