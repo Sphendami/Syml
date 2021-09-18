@@ -1,4 +1,4 @@
-Small programming language with functional programming and type inference
+Joke programming language where available characters to write its sourse codes are symbols only
 
 # Usage
 .NET environemnt is required.
@@ -6,31 +6,36 @@ Small programming language with functional programming and type inference
 - `dotnet run` : Run the interactive session.
 - `dotnet run <file-name>` : Load and evaluate the file and start the interactive session.
 
+# Available characters
+`!` `?` `'` `"` ``` ` ``` `+` `-` `=` `(` `)` `[` `]` `{` `}` `<` `>` `;` `:` `,` `.` `@` `#` `$` `%` `&` `~` `|` `*` `^` `_` `/` `\`
+
 # Syntax
+- Variable is a sequence of available characters which starts with `$`.
+- Integer is a sequence of `_` and `-` which starts with `#`, representing a binary sequence where `_` corresponds to 0 and `-` corresponds to 1. (e.g. `#--_-` means 1101 in binary, or 13 in decimal.)
 ```
 T ::=
-      | x                     variable
-      | true                  true
-      | false                 false
-      | i                     integer
-      | fun x -> T            function
-      | T T                   application
-      | if T then T else T    conditional branching
-      | let x = T in T        let binding and sequencing
-      | let rec x = T in T    recursive let binding and sequencing
-      | T && T                boolean and
-      | T || T                boolean or
-      | T = T                 equality
-      | T < T                 less than
-      | T > T                 greater than
-      | T <= T                less than or equal
-      | T >= T                greater than or equal
-      | T + T                 addition
-      | T - T                 subtraction
-      | T * T                 multiplication
-      | T / T                 division
-      | + T                   positive sign
-      | - T                   negative sign
+      | $<sequence of symbols>      variable
+      | ?+                          true
+      | ?-                          false
+      | #<sequense of '_' and '-'>  integer
+      | \<var> -> T                 function
+      | T T                         application
+      | T ? T : T                   conditional branching
+      | !! <var> = T ; T            let binding and sequencing
+      | !!^ <var> = T ; T           recursive let binding and sequencing
+      | T && T                      boolean and
+      | T || T                      boolean or
+      | T = T                       equality
+      | T < T                       less than
+      | T > T                       greater than
+      | T <= T                      less than or equal
+      | T >= T                      greater than or equal
+      | T + T                       addition
+      | T - T                       subtraction
+      | T * T                       multiplication
+      | T / T                       division
+      | + T                         positive sign
+      | - T                         negative sign
 ```
 
 # Type
@@ -48,8 +53,8 @@ Ty ::=
 
 
 # Toplevel let binding
-- `let x = T`
-- `let rec x = T`
+- `!! x = T`
+- `!!^ x = T`
 
 # Directives
 - `#help`
@@ -60,11 +65,12 @@ Put `#help;;` on the interactive session to show details.
 
 # Example
 ```
-:> let rec fact = fun n ->
-:       if n <= 1 then 1
-:       else n * fact (n - 1)
-:  in
-:  fact 5;;
+:> !!^ $! = \$# ->
+:       $# <= #-
+:       ? #-
+:       : $# * $! ($# - #-)
+:  ;
+:  $! #-_-;;
 type: Int
 eval: 120 (with [])
 ```

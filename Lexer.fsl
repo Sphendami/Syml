@@ -17,21 +17,28 @@ rule token = parse
     | '\n' {newline lexbuf; token lexbuf}
     | "//" [^'\n']* {newline lexbuf; token lexbuf}
     | ";;" {EOT (currPos lexbuf)}
-    | "true" {TRUE (currPos lexbuf)}
-    | "false" {FALSE (currPos lexbuf)}
+    | "?+" {TRUE (currPos lexbuf)}
+    | "?-" {FALSE (currPos lexbuf)}
     | "if" {IF (currPos lexbuf)}
-    | "then" {THEN (currPos lexbuf)}
-    | "else" {ELSE (currPos lexbuf)}
-    | "fun" {FUN (currPos lexbuf)}
-    | "let" {LET (currPos lexbuf)}
-    | "rec" {REC (currPos lexbuf)}
-    | "in" {IN (currPos lexbuf)}
+    | "?" {THEN (currPos lexbuf)}
+    | ":" {ELSE (currPos lexbuf)}
+    | "\\" {FUN (currPos lexbuf)}
+    | "!!" {LET (currPos lexbuf)}
+    | "^" {REC (currPos lexbuf)}
+    | ";" {IN (currPos lexbuf)}
     | "#help" {HASHHELP (currPos lexbuf)}
     | "#load" {HASHLOAD (currPos lexbuf)}
     | "#exit" {HASHEXIT (currPos lexbuf)}
-    | ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '_']*
+    | '$' ['!' '?' '\'' '"' '`' '+' '-' '=' '(' ')' '[' ']' '{' '}' '<' '>' ';' ':' ',' '.' '@' '#' '$' '%' '&' '~' '|' '*' '^' '_' '/' '\\']*
         {VAR (lexeme lexbuf, currPos lexbuf)}
-    | ['+' '-']? ['0'-'9']+ {INTEGER (lexeme lexbuf |> int, currPos lexbuf)}
+    | '#' ['_' '-']+ {
+        let value =
+            lexeme lexbuf
+            |> fun s -> s.Substring 1
+            |> String.map (fun c -> if c = '_' then '0' else '1')
+            |> fun b -> System.Convert.ToInt32(b, 2)
+        INTEGER (value, currPos lexbuf)
+    }
     | '+' {PLUS (currPos lexbuf)}
     | '-' {MINUS (currPos lexbuf)}
     | '*' {STAR (currPos lexbuf)}

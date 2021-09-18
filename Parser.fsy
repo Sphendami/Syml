@@ -71,7 +71,7 @@ term:
         let arg = openVar $2
         Abs (arg, $4) |> createTerm $1
     }
-    | IF term THEN term ELSE term {If ($2, $4, $6) |> createTerm $1}
+    | term THEN term ELSE term {If ($1, $3, $5) |> createTerm $1.TermInfo}
     | LET atom EQUAL term IN term {
         let x = openVar $2
         Let (x, $4, $6) |> createTerm $1
