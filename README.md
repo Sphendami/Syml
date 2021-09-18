@@ -14,7 +14,7 @@ Joke programming language where available characters to write its sourse codes a
 - Integer is a sequence of `_` and `-` which starts with `#`, representing a binary sequence where `_` corresponds to 0 and `-` corresponds to 1. (e.g. `#--_-` means 1101 in binary, or 13 in decimal.)
 ```
 T ::=
-      | $<sequence of symbols>      variable
+      | $<sequence of symbols>      variable (denoted as <var> below)
       | ?+                          true
       | ?-                          false
       | #<sequense of '_' and '-'>  integer
@@ -50,11 +50,12 @@ Ty ::=
 ```
 // comment
 ```
+You can use non-symbol characters in comments.
 
 
 # Toplevel let binding
-- `!! x = T`
-- `!!^ x = T`
+- `!! <var> = T`
+- `!!^ <var> = T`
 
 # Directives
 - `##?`
@@ -81,3 +82,20 @@ eval: #----___ (with [])
 - Comment including "`;;`" causes unexpected behavior.
 - Line number in error message becomes wrong in a certain case.
 - Type error explanation in a certain case is unclear.
+
+# Tips
+When you are confused by the error message like below,
+
+```
+parsing error: `` @line 1, char 23
+```
+
+it may be helpful to separate the `;;` by inserting a space before it, e.g.:
+
+```
+// NG
+!! $_ = #-; #-_ + $_;;
+
+// OK
+!! $_ = #-; #-_ + $_ ;;
+```
