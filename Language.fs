@@ -31,9 +31,11 @@ type TermTree =
             | App (t1, t2) -> $"(%A{t1}) (%A{t2})"
             | Boolean b -> if b then "?+" else "?-"
             | Integer i ->
-                System.Convert.ToString(i, 2)
+                let sign = if i >= 0 then "" else "-"
+                abs i
+                |> (fun i -> System.Convert.ToString(i, 2))
                 |> String.map (fun c -> if c = '0' then '_' else '-')
-                |> (fun s -> "#" + s)
+                |> (fun iSym -> $"{sign}#{iSym}")
             | If (c, t, e) -> $"%A{c} ? %A{t} : %A{e}"
             | BinaryOp (op, t1, t2) ->
                 let opSymb =
